@@ -704,7 +704,7 @@ saveRDS(sample, file = paste(path,'repeatpre3.rds', sep=""), ascii = FALSE, vers
 ###########################################################################################################################
 ###########################################################################################################################
 ###########################################################################################################################
-sample.1<-readRDS(paste(path,'repeatpre3.rds', sep=""), refhook = NULL)
+sample<-readRDS(paste(path,'repeatpre3.rds', sep=""), refhook = NULL)
 NPL<-readRDS(paste(path,'NPLfull.rds', sep=""), refhook = NULL)
 
 pNPL<-subset(NPL,rat_name=="PROPOSAL TO NPL")
@@ -725,8 +725,6 @@ finalInstitutional<-c("HealthAdvisory","GroundwaterUseRegulation","DeedNotices",
 deletedContaminant<-c("gw","a","n")
 
 
-sample<-sample.1
-
 sample<-sample[!is.na(sample$sqfeet),]
 sample<-sample[!is.na(sample$YearBuilt),]
 sample<-sample[!is.na(sample$LotSizeSquareFeet),]
@@ -736,214 +734,11 @@ sample<-sample[!is.na(sample$NoOfStories),]
 #sample<-subset(sample, TotalRooms>0)
 sample<-sample[!is.na(sample$TotalBedrooms),] 
 
+
 d.sample.data<-sample
-#attach(sample)
-upper.spatial.range<-c(10)
-lower.spatial.range<-c(0)
-spatial.power.range<-c(0,1)
-temporal.cut.range<-c(30)
-temporal.power.range<-c(0,1)
-
-urange<-upper.spatial.range
-lrange<-lower.spatial.range
-prange<-spatial.power.range
-crange<-temporal.cut.range
-qrange<-temporal.power.range
-
-cpack<-as.character(packages)
-
-W.trend.lag.variables<-function(urange,lrange,prange,crange,qrange,path){
-  
-  
-  denom<-0 
-  for(c in crange){
-    for(q in qrange){
-      denom<-denom+1
-    }
-  }   
-  for(u in urange){
-    for(l in lrange){
-      for(p in prange){
-        if(u>l){
-          denom<-denom+1
-        }
-        
-      }
-    }
-  }
-  for(d in 1:2){ 
-    for(u in urange){
-      for(l in lrange){
-        for(p in prange){
-          for(c in crange){
-            for(q in qrange){
-              if(l<u){
-                denom<-denom+1
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  
-  
-  dist.mat<-distm (cbind(d.sample.data$PropertyAddressLongitude, d.sample.data$PropertyAddressLatitude), fun = distHaversine)
-  
-  Wtime<- function(c,q){  
-    t<-d.sample.data$date
-    rep.row<-function(x,n){
-      matrix(rep(x,each=n),nrow=n)
-    }
-    t<-d.sample.data$date
-    T1<-rep.row(t,nrow(d.sample.data))
-    T2<-T1
-    T1<-t(T1)
-    Tdp<-t(t(T1-T2))
-    Tdp[Tdp >= c*365] = -2
-    Tdp[Tdp <=0] = -2
-    Wtp<-1/(1+Tdp)
-    Wtp[Wtp<0]<-0
-    #Wtp[Wtp == 'Inf'] = 0
-    Wt<-Wtp^q
-    Wt<-return(Wt)
-    print(Wt)
-  }
-  
-  num<-0
-  for(c in crange){
-    for(q in qrange){
-      
-      assign(paste('wt',c,'m',q,sep=""),Wtime(c,q))
-      num<-num+1
-      print(paste(num, 'of', denom,sep=" "))
-    }
-  }
-  
-  
-  Wspat<- function(u,l,p){  
-    
-    Sp<-dist.mat
-    Sp[Sp>= u*500] = -2
-    Sp[Sp <= l*500] = -2
-    Wsp<-1/(1+Sp)
-    Wsp[Wsp<0]<-0
-    #Wsp[Wsp == 'Inf'] = 0
-    Ws<-Wsp^p
-    Ws<-return(Ws)
-    print(Ws)
-  }
-  
-  for(u in urange){
-    
-    for(l in lrange){
-      for(p in prange){
-        assign(paste('ws',u,'m',l, 'm',p,sep=""),Wspat(u,l,p))
-        if(u>l){
-          num<-num+1
-          print(paste(num,'of',denom,sep=" "))
-        }
-        else{num<-num}
-      }
-    }
-  }
-  
-  #Dummies
-  
-  rep.row<-function(x,n){
-    matrix(rep(x,each=n),nrow=n)
-  }
-  
-  A<-rep.row(d.sample.data$YearBuilt,nrow(d.sample.data))
-  At<-t(A)
-  D<-At-A
-  D[D<10000000000]<-1
-  D1<-D
-  
-  A<-rep.row(d.sample.data$sqfeet,nrow(d.sample.data))
-  At<-t(A)
-  D<-At-A
-  D[D<= -500 ]<-10000000
-  D[D>= 500 ]<-10000000
-  D[D<1000000]<-1
-  D[D>1000000]<-0
-  D2<-D
-  
-  
-  for(d in 1:2){ 
-    for(u in urange){
-      for(l in lrange){
-        for(p in prange){
-          for(c in crange){
-            for(q in qrange){
-              if(l<u){
-                Wst=hadamard.prod(get(paste('ws',u,'m',l, 'm',p,sep="")), get(paste('wt',c,'m',q,sep="")))
-                Wst<-Wst*get(paste('D',d, sep=""))
-                weight<-rowSums(Wst)
-                for(i in 1:nrow(d.sample.data)){
-                  if(weight[i]==0){
-                    weight[i]<-1
-                  }
-                }
-                Wst<-Wst*(1/weight)
-                
-                assign(paste('wu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep=""),Wst)
-                assign(paste('lagu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep=""),Wst %*% d.sample.data$price)
-                assign(paste('lnlagu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep=""),Wst %*% d.sample.data$logprice)
-                assign(paste('ylnywu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep=""), d.sample.data$logprice-get(paste('lnlagu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep="")))
-                assign(paste('lntrendu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep=""),Wst %*% get(paste('ylnywu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep="")))
-                assign(paste('yywu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep=""), d.sample.data$price-get(paste('lagu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep="")))
-                assign(paste('trendu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep=""),Wst %*% get(paste('yywu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep="")))
-                
-                d.sample.data[[paste0('lagu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep="")]]<-Wst %*% d.sample.data$price
-                d.sample.data[[paste0('lnlagu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep="")]]<-Wst %*% d.sample.data$logprice
-                d.sample.data[[paste0('lntrendu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep="")]]<-Wst %*% get(paste('ylnywu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep=""))
-                d.sample.data[[paste0('trendu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep="")]]<-Wst %*% get(paste('yywu',u,'l',l, 'sp',p,'d',d,'c',c, 'tp',q,sep=""))
-                
-                num<-num+1
-                print(paste(num,'of',denom,sep=" "))
-                
-              }
-            }
-          }
-        } 
-      }
-    }
-  }
-  
-  saveRDS(d.sample.data, file = path, ascii = FALSE, version = NULL,
-          compress = TRUE, refhook = NULL)
-  #stop cluster
-  
-}
-start.time <- Sys.time()
-
-W.trend.lag.variables(upper.spatial.range,lower.spatial.range,spatial.power.range,
-                      temporal.cut.range,temporal.power.range,paste(path,'repeat5nobin',s,'.rds', sep=""))
-
-end.time <- Sys.time()
-time.taken <- end.time - start.time
-time.taken
-
-
-
-d.sample.data<-readRDS(paste(path,'repeat5nobin',s,'.rds', sep=""), refhook = NULL)
-
-year.f. = factor(d.sample.data$year)
-year.dummies = model.matrix(~year.f.)
-
-month.f. = factor(d.sample.data$month)
-month.dummies = model.matrix(~month.f.)
-
-sample.mich<- cbind(d.sample.data,year.dummies, month.dummies)
 
 myvars <- names(d.sample.data) %in% c("Intercept") 
 d.sample.data <- d.sample.data[!myvars]
-
-lagu<-select(d.sample.data, starts_with("lagu"))
-lnlagu<-select(d.sample.data, starts_with("lnlagu"))
-trendu<-select(d.sample.data, starts_with("trendu"))
-lntrendu<-select(d.sample.data, starts_with("lntrendu"))
 
 for(i in 1:40){
   d.sample.data[[paste0("binsqfeet",i)]]<-ifelse(d.sample.data$sqfeet-(i*250)<=0 & d.sample.data$sqfeet-((i-1)*250)>0,1,0 )
@@ -974,10 +769,8 @@ PropertyAddressCensusTractAndBlock.f. = factor(d.sample.data$PropertyAddressCens
 PropertyAddressCensusTractAndBlock.dummies = model.matrix(~PropertyAddressCensusTractAndBlock.f.)
 d.sample.data<- cbind(d.sample.data,PropertyAddressCensusTractAndBlock.dummies)
 
-HHID.f. = factor(d.sample.data$HHID)
-HHID.dummies = model.matrix(~HHID.f.)
-d.sample.data<- cbind(d.sample.data,HHID.dummies)
-
+saveRDS(d.sample.data, file = paste(path,'repeat10.rds', sep=""), ascii = FALSE, version = NULL,
+        compress = TRUE, refhook = NULL)
 
 #repeat sales Bajari
 
@@ -1044,8 +837,12 @@ for(i in 1:15){
   d.sample.data[[paste0("binPreDiffDate",i)]]<-ifelse(d.sample.data$prediffdate-((i-1)*365)>=0 & d.sample.data$prediffdate-(i*365)<0 ,1,0)
 }
 
+HHID.f. = factor(d.sample.data$HHID)
+HHID.dummies = model.matrix(~HHID.f.)
+d.sample.data<- cbind(d.sample.data,HHID.dummies)
 
-saveRDS(d.sample.data, file = paste(path,'repeat5.rds', sep=""), ascii = FALSE, version = NULL,
+
+saveRDS(d.sample.data, file = paste(path,'repeat10.rds', sep=""), ascii = FALSE, version = NULL,
         compress = TRUE, refhook = NULL)
 
 sample<-readRDS(paste(path,'repeat5.rds', sep=""), refhook = NULL)
