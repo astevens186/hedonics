@@ -14,7 +14,7 @@ pkgTest <- function(x) {
 }
 
 ## These lines load the required packages
-packages <- c("readxl","MASS","grf","hdi","sphet","spdep","tmle","xgboost", "data.table","magrittr","Hmisc","DT","h2o","nnet","caret","quantmod","neuralnet","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
+packages <- c("readxl","MASS","splines","Hmisc","grf","hdi","sphet","spdep","tmle","xgboost", "data.table","magrittr","Hmisc","DT","h2o","nnet","caret","quantmod","neuralnet","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
 lapply(packages, pkgTest)
 
 
@@ -166,7 +166,7 @@ SL.library$as.list()
 
 set.seed(12345)
 #set n=200 and number of replications=200
-N <- 3000
+N <- 1000
 P<-40
 n.sims <- 20
 
@@ -208,20 +208,30 @@ for(j in 1:n.sims){
   
   I<-diag(N)
   alpha<-.75
-  lat<-.1*runif(N)-87
-  long<-.1*runif(N)+41
+  lat<-.08*runif(N)-87
+  long<-1*runif(N)+41
   time<-1990+(10*runif(N))
   
-  gridquants<-5
-  indlat<- factor(as.numeric(cut2(lat, g=gridquants)))
-  indlong<- factor(as.numeric(cut2(long, g=gridquants)))
-  blockfe<-model.matrix(~indlat:indlong-1)
-  gblockfe<-blockfe[,sample.int(n=(gridquants^2), size=((gridquants^2)/4))]%*%as.matrix(sample.int(n=50,size=((gridquants^2)/4)))
-  
-  modelgridquants<-25
+  modelgridquants<-10
   indmlat<- factor(as.numeric(cut2(lat, g=modelgridquants)))
   indmlong<- factor(as.numeric(cut2(long, g=modelgridquants)))
   blockmfe<-model.matrix(~indmlat:indmlong-1)
+  
+  treatlat<-median(lat)
+  treatlong<-median(long)
+  disttreat<-distm(cbind(long, lat),c(treatlong,treatlat), fun = distHaversine)
+  TE<-100000*Treatment*(1/(disttreat+2000))
+  summary(TE)
+  #Create a function to generate a continuous color palette
+  rbPal <- colorRampPalette(c('red','blue'))
+  
+  #This adds a column of color values
+  # based on the y values
+  Col <- rbPal(10)[as.numeric(cut(TE,breaks = 10))]
+  
+  plot(lat,long,pch = 20,col = Col)
+  legend("topleft",title="Decile",legend=c(1:10),col =rbPal(10),pch=20)
+  
   
   dW<-distm(cbind(long, lat), fun = distHaversine)
   dW<-ifelse(dW<2000, dW, -10)
@@ -250,25 +260,24 @@ for(j in 1:n.sims){
     10*dumx[,(quants*5)]+9*dumx[,(quants*5)+1]+3*dumx[,(quants*5)+2]+
     10*dumx[,(quants*8)+1]+5*dumx[,(quants*8)+2]+7*dumx[,(quants*8)+3]+
     1*dumx[,(quants*9)]+6*dumx[,(quants*9)+3]-6*dumx[,(quants*9)+5]+
-    gblockfe-.8*time+.000002*time^2+.0000002*time^3
-  y <- -20*Treatment*blockfe[,7]-20*Treatment*blockfe[,19]+#500*Treatment*((lat-41.04)+(long+86.95))+
-    20*Treatment*blockfe[,9]+20*Treatment*blockfe[,17]+20*Treatment*x[,4]^2+
-    #5*Treatment+
-    x[,1] * 2+ x[,2] * 2.5 + 60*x[,3]-2*x[,3]^2-2*x[,3]^3+
+   .8*time+.000002*time^2+.0000002*time^3
+  
+  y <- TE+ 10*Treatment*x[,1]^2+
+    x[,2] * 2.5 + 60*x[,3]-2*x[,3]^2-2*x[,3]^3+
     #5*(x[,4]*x[,5])+2*(x[,4]*x[,5])^2+
     6*x[,7]^2+3*x[,8]^2- 2*x[,8]^3+
     10*dumx[,(quants*5)]+9*dumx[,(quants*5)+1]+3*dumx[,(quants*5)+2]+
     10*dumx[,(quants*8)+1]+5*dumx[,(quants*8)+2]+7*dumx[,(quants*8)+3]+
     1*dumx[,(quants*9)]+6*dumx[,(quants*9)+3]-6*dumx[,(quants*9)+5]+
-    alpha*W%*%prey-.8*time+.000002*time^2+.0000002*time^3+gblockfe+
+    -.8*time+.000002*time^2+.0000002*time^3+
     rnorm(N)
   #y<-ginv(I-alpha*W)%*%prey
   
   #### Estimating true relationships
     
   #set points  
-    at <- as.matrix(seq(-87, -86.9, length.out = 10))
-    bt <- as.matrix(seq(41, 41.1, length.out = 10))
+    at <- as.matrix(seq(min(lat), max(lat), length.out = 10))
+    bt <- as.matrix(seq(min(long), max(long), length.out = 10))
     setp<-matrix(ncol=2,nrow =110 )
     for(i in 1:dim(at)[1]){
       for(j in 1:dim(bt)[1]){
@@ -278,6 +287,10 @@ for(j in 1:n.sims){
     setp<-setp[10:109,]
     #dsetp<-distm( cbind(long, lat),setp,fun = distHaversine)
   ## Overspecify
+  splat<-bs(lat, df = 10)
+  splong<-bs(long, df = 10)
+  spint<-model.matrix(~splat:splong)
+  
   xds<-cbind(lat,long,lat,long,lat,long,
              lat,long,lat,long,lat,long,
              #lat+long,lat*long,lat^2*long^2,lat/long,
@@ -285,16 +298,17 @@ for(j in 1:n.sims){
              blockmfe,x,W%*%y,time,time^2,time^3,polyx,dumx)
   feds<-cbind(model.matrix(~as.factor(floor(time))))
   xtl<-cbind(x,W%*%y,lat,long,time)
-  xgrf<-cbind(xds,feds)
+  xgrf<-cbind(xds,feds,spint,splat,splong,rep(1,N))
+  
   
   #GRF
   c.forest<-causal_forest(X=xgrf, Y=y, W=Treatment,
-                          num.trees=1000000,min.node.size=10,num.threads =100,
+                          num.trees=10000,min.node.size=10,num.threads =100,
                           mtry = ceiling(ncol(xgrf)*.5) )
   
   xtest<- matrix(0, 10100, dim(xgrf)[2])
-  a <- as.matrix(seq(-87, -86.9, length.out = 100))
-  b <- as.matrix(seq(41, 41.1, length.out = 100))
+  a <- as.matrix(seq(min(long), max(long), length.out = 100))
+  b <- as.matrix(seq(min(lat), max(lat), length.out = 100))
  
   for(i in 1:dim(a)[1]){
     for(j in 1:dim(b)[1]){
@@ -322,11 +336,27 @@ for(j in 1:n.sims){
   xtest[,13:(dim(blockmfe)[2]+12)]<-model.matrix(~indmlat:indmlong-1)
   
   xtest1<- matrix(0, 100, dim(xgrf)[2])
-  xtest1[,(dim(blockmfe)[2]+13)] <- as.matrix(seq(min(x[,4]), max(x[,4]), length.out = 100))
+  xtest1[,(dim(blockmfe)[2]+13)] <- as.matrix(seq(min(x[,1]), max(x[,1]), length.out = 100))
+  
   
   xtest<-rbind(xtest,xtest1)
+  
+  #xtest[,dim(xgrf)[2]]<-distm(cbind(xtest[,1], xtest[,2]),c(treatlong,treatlat), fun = distHaversine)
+  
   #dsetptest<-distm( cbind(b, a),setp,fun = distHaversine)
   #xtest[,(dim(blockmfe)[2]+13):((dim(blockmfe)[2]+13)+dim(dsetptest)[2])]<-dsetptest
+  
+  xtest[,(dim(xgrf)[2]-dim(splat)[2]-dim(splong)[2]):(dim(xgrf)[2]-1-dim(splong)[2])]<-bs(xtest[,2], df = 10)
+  xtest[,(dim(xgrf)[2]-dim(splong)[2]):(dim(xgrf)[2]-1)]<-bs(xtest[,1], df = 10)
+  int<-(dim(xgrf)[2]-dim(splat)[2]-dim(splong)[2]-dim(spint)[2]):(dim(xgrf)[2]-1-dim(splong)[2]-dim(splat)[2])
+  
+  xtest[,int] <-model.matrix(~bs(xtest[,2], df = 10):bs(xtest[,1], df = 10))
+  
+  for(i in 1:dim(xtest)[2]){
+    if(sum(xtest[,i])==0){
+      xtest[,i]<-median(xgrf[,i])
+    }
+  }
   
   tau.hat <- predict(c.forest, xtest, estimate.variance = TRUE)
   t<-tau.hat$predictions/sqrt(tau.hat$variance.estimates/N)
@@ -374,73 +404,6 @@ for(j in 1:n.sims){
   plot(xtest[10001:10100,(dim(blockmfe)[2]+13)],tau.hat$predictions[10001:10100,],pch = 20,col = Col3)
   legend("top",title="Significance",legend=c("t< -1.96","-1.96<t<1.96","t>1.96"),col =rbPal3(3),pch=20)
   
-  
-  ###################################################################################
-  #DML
-  
-  xdml<-cbind(xds,feds)
-  
-  # = Cross-fitting DML = #
-  # = Split sample = #
-  I<-sort(sample(1:N,N/2))
-  IC<-setdiff(1:N,I)
-  # = compute ghat on both sample = #
-  
-  model11<-mcSuperLearner(Y=y[IC& Treatment==1],X=xdml[IC & Treatment==1,],
-                         SL.library=SL.library$as.list(), family=gaussian(),
-                         #obsWeights = train$as.matrix.weight.d.weightdlog,
-                         method="method.NNLS", verbose=TRUE)
-  model10<-mcSuperLearner(Y=y[IC& Treatment==0],X=xdml[IC & Treatment==0,],
-                          SL.library=SL.library$as.list(), family=gaussian(),
-                          #obsWeights = train$as.matrix.weight.d.weightdlog,
-                          method="method.NNLS", verbose=TRUE)
-  model21<-mcSuperLearner(Y=y[I& Treatment==1],X=xdml[I & Treatment==1,],
-                         SL.library=SL.library$as.list(), family=gaussian(),
-                         #obsWeights = train$as.matrix.weight.d.weightdlog,
-                         method="method.NNLS", verbose=TRUE)
-  model20<-mcSuperLearner(Y=y[I& Treatment==0],X=xdml[I & Treatment==0,],
-                          SL.library=SL.library$as.list(), family=gaussian(),
-                          #obsWeights = train$as.matrix.weight.d.weightdlog,
-                          method="method.NNLS", verbose=TRUE)
-  
-  #model1<-randomForest(xdml[IC,],y[IC],maxnodes = 10)
-  #model2<-randomForest(xdml[I,],y[I], maxnodes = 10)
-  G11<-predict(model11,xdml[I& Treatment==1,], onlySL = T)
-  G21<-predict(model21,xdml[IC& Treatment==1,], onlySL = T)
-  G10<-predict(model10,xdml[I& Treatment==0,], onlySL = T)
-  G20<-predict(model20,xdml[IC& Treatment==0,], onlySL = T)
-  # = Compute mhat and vhat on both samples = #
-  
-  modeld1<-mcSuperLearner(Y=Treatment[IC],X=xdml[IC,],
-                          SL.library=SL.library$as.list(), family=gaussian(),
-                          #obsWeights = train$as.matrix.weight.d.weightdlog,
-                          method="method.NNLS", verbose=TRUE)
-  modeld2<-mcSuperLearner(Y=Treatment[I],X=xdml[I,],
-                          SL.library=SL.library$as.list(), family=gaussian(),
-                          #obsWeights = train$as.matrix.weight.d.weightdlog,
-                          method="method.NNLS", verbose=TRUE)
-  #modeld1<-randomForest(xdml[IC,],Treatment[IC],maxnodes = 10)
-  #modeld2<-randomForest(xdml[I,],Treatment[I],maxnodes = 10)
-  M1<-predict(modeld1,xdml[I,], onlySL = T)
-  M2<-predict(modeld2,xdml[IC,], onlySL = T)
-  #V1<-Treatment[I]-M1$pred
-  #V2<-Treatment[IC]-M2$pred
-  
-  # = Compute Cross-Fitting DML theta
-  theta1<-G11$pred-G10$pred + (Treatment[I]*(y[I]-G11$pred)/M1$pred)-((1-Treatment[I])*(y[I]-G10$pred)/(1-M1$pred))
-  theta2<-G21$pred-G20$pred + (Treatment[IC]*(y[IC]-G21$pred)/M2$pred)-((1-Treatment[IC])*(y[IC]-G20$pred)/(1-M2$pred))
-  theta_cf<-mean(c(theta1,theta2))
-  #theta1<-mean(V1*(y[I]-G1$pred))/mean(V1*Treatment[I])
-  #theta2<-mean(V2*(y[IC]-G2$pred))/mean(V2*Treatment[IC])
-  #theta_cf<-mean(c(theta1,theta2))
-  zeta1<-y[I]-Treatment[I]*theta_cf-G1$pred
-  zeta2<-y[IC]-Treatment[IC]*theta_cf-G2$pred
-  sigma1<-(mean(V1*V1)^(-2))*mean(V1^2*zeta1^2)
-  sigma2<-(mean(V2*V2)^(-2))*mean(V2^2*zeta2^2)
-  sigma_cf<-mean(c(sigma1,sigma2))
-  t1<-(theta_cf-5)/sqrt(sigma_cf/N)
-  t2<-(theta_cf-0)/sqrt(sigma_cf/N)
-  betahat.dml[j,]<-theta_cf
   
   
   
