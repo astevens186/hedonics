@@ -34,10 +34,10 @@ fNPL<-subset(NPL,rat_name=="FINAL LISTING ON NPL")
 dNPL<-subset(NPL,rat_name=="DELETION FROM NPL"|rat_name=="PARTIAL NPL DELETION")
 pdNPL<-subset(NPL,rat_name=="PARTIAL NPL DELETION")
 
-opNPL<- pNPL[order(pNPL$date),] 
-ofNPL<- fNPL[order(fNPL$date),] 
-odNPL<- dNPL[order(dNPL$date),] 
-opdNPL<- dNPL[order(pdNPL$date),] 
+opNPL<- pNPL#[order(pNPL$date),] 
+ofNPL<- fNPL#[order(fNPL$date),] 
+odNPL<- dNPL#[order(dNPL$date),] 
+opdNPL<- pdNPL#[order(pdNPL$date),] 
 
 ##set up superlearner for TMLE
 num_cores = RhpcBLASctl::get_num_cores()
@@ -139,6 +139,36 @@ for(i in 1:length(randomForest$names)){
 }
 
 SL.library$as.list()
+#############################################################################
+#potential sites
+psites<-expandingList()
+for(k in c("full")){
+  for(i in 1:dim(odNPL)[1]){
+    #k<-"full"
+    #i<-73
+    if (file.exists(paste(path,k,'deletiongw',i,'.rds', sep=""))){
+      sample.1<-readRDS(paste(path,k,'deletiongw',i,'.rds', sep=""), refhook = NULL)
+      print(paste0(k,"and",i,"sample size = ", dim(sample.1[sample.1$treatmentgroup>0,])))
+      print(paste0(k,"and",i,"treated = ", dim(sample.1[sample.1$treatdgw>0,])))
+      print(paste0(k,"and",i,"control = ", dim(sample.1[sample.1$control>0,])))
+      sample.1$treatgwWL<- sample.1$treatdgw * sample.1$WaterStndCode.fWL
+      print(paste0(k,"and",i,"treat well = ", dim(sample.1[sample.1$treatgwWL>0,])[1]))
+      sample.1$treatgwMU<- sample.1$treatdgw * sample.1$WaterStndCode.fMU
+      print(paste0(k,"and",i,"treat public = ", dim(sample.1[sample.1$treatgwMU>0,])[1]))
+      cut<-500
+      if(dim(sample.1[sample.1$treatgwWL>0,])[1]-cut>0 & dim(sample.1[sample.1$treatgwMU>0,])[1]-cut>0 &
+        dim(sample.1[sample.1$control>0,])[1]-cut>0 & 
+        dim(sample.1[sample.1$treatmentgroup>0,])[1]-dim(sample.1[sample.1$treatdgw>0,])[1]-cut>0){
+          psites$add(paste0("site",i))
+        }
+          
+       
+    }
+  }
+}
+####################################################################
+
+sample.1<-readRDS(paste(path,'fulldeletion73.rds', sep=""), refhook = NULL)
 
 ###############################################################################################
 for(k in c("full")){
