@@ -1,6 +1,7 @@
 
 ## Preliminaries
 rm(list=ls())
+gc()
 
 # Change working directory to where you've stored ZTRAX
 path<- "P:/Peter/Hedonics/Groundwater/"
@@ -472,10 +473,10 @@ pdNPL<-subset(NPL,rat_name=="PARTIAL NPL DELETION")
 #ccNPL<-subset(NPL,rat_name=="CONTRUCTION COMPLETE")
 
 
-opNPL<- pNPL[order(pNPL$date),] 
-ofNPL<- fNPL[order(fNPL$date),] 
-odNPL<- dNPL[order(dNPL$date),] 
-opdNPL<- dNPL[order(pdNPL$date),] 
+opNPL<- pNPL#[order(pNPL$date),] 
+ofNPL<- fNPL#[order(fNPL$date),] 
+odNPL<- dNPL#[order(dNPL$date),] 
+opdNPL<- dNPL#[order(pdNPL$date),] 
 
 of.sitedist.mat<-distm(cbind(sample$PropertyAddressLongitude, sample$PropertyAddressLatitude),cbind(ofNPL$long,ofNPL$lat), fun = distHaversine)
 colnames(of.sitedist.mat)<-colnames(of.sitedist.mat, do.NULL = FALSE, prefix = "fNPL")
@@ -496,9 +497,9 @@ for(i in 1:dim(ofNPL)[1]){
 #sample<-subset(sample,  select=-c(z,u))
 
 
-final<-select(sample, starts_with('aftfinalnpl'))
+#final<-select(sample, starts_with('aftfinalnpl'))
 
-sample <- subset(sample, rowSums(final,na.rm = TRUE)==1)
+#sample <- subset(sample, rowSums(final,na.rm = TRUE)==1)
 
 
 attach(sample)
@@ -513,13 +514,74 @@ for(i in deletedCompletion){
     treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
     treat[is.na(treat)]<-0
     sample[[paste0('treat',i,j)]]<-treat
+    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]-365>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatp1',i,j)]]<-treat
+    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]-(2*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatp2',i,j)]]<-treat
+    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]-(3*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatp3',i,j)]]<-treat
+    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]-(4*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatp4',i,j)]]<-treat
+    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]-(5*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatp5',i,j)]]<-treat
+    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]+365>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatm1',i,j)]]<-treat
+    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]+(2*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatm2',i,j)]]<-treat
+    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]+(3*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatm3',i,j)]]<-treat
+    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]+(4*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatm4',i,j)]]<-treat
+    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]+(5*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatm5',i,j)]]<-treat
   }
 }
+
 for(i in deletedCompletion){
   for(j in 1:dim(opdNPL)[1]){
     treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
     treat[is.na(treat)]<-0
     sample[[paste0('treat',i,'p',j)]]<-treat
+    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]-365>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatp1',i,'p',j)]]<-treat
+    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]-(2*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatp2',i,'p',j)]]<-treat
+    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]-(3*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatp3',i,'p',j)]]<-treat
+    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]-(4*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatp4',i,'p',j)]]<-treat
+    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]-(5*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatp5',i,'p',j)]]<-treat
+    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]+365>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatm1',i,'p',j)]]<-treat
+    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]+(2*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatm2',i,'p',j)]]<-treat
+    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]+(3*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatm3',i,'p',j)]]<-treat
+    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]+(4*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatm4',i,'p',j)]]<-treat
+    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]+(5*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
+    treat[is.na(treat)]<-0
+    sample[[paste0('treatm5',i,'p',j)]]<-treat
   }
 }
 
@@ -672,11 +734,6 @@ for(i in 1:dim(odNPL)[1]){
 treatgroupdn<-rowSums(select(sample, starts_with('treatgroupdn')))
 sample<-cbind(sample,treatgroupdn)
 
-MU<-subset(sample, WaterStndCode == "MU")
-WL<-subset(sample, WaterStndCode == "WL")
-
-sample<-rbind(MU,WL)
-
 WaterStndCode.f <-factor(sample$WaterStndCode)
 WaterStndCodeD <- model.matrix(~WaterStndCode.f-1)
 
@@ -698,13 +755,13 @@ for(i in 1:dim(opdNPL)[1]){
 
 
 ## save
-saveRDS(sample, file = paste(path,'repeatpre3.rds', sep=""), ascii = FALSE, version = NULL,
+saveRDS(sample, file = paste(path,'repeatpr10.rds', sep=""), ascii = FALSE, version = NULL,
         compress = TRUE, refhook = NULL)
 
 ###########################################################################################################################
 ###########################################################################################################################
 ###########################################################################################################################
-sample<-readRDS(paste(path,'repeatpre3.rds', sep=""), refhook = NULL)
+sample<-readRDS(paste(path,'repeatpr10.rds', sep=""), refhook = NULL)
 NPL<-readRDS(paste(path,'NPLfull.rds', sep=""), refhook = NULL)
 
 pNPL<-subset(NPL,rat_name=="PROPOSAL TO NPL")
@@ -712,10 +769,10 @@ fNPL<-subset(NPL,rat_name=="FINAL LISTING ON NPL")
 dNPL<-subset(NPL,rat_name=="DELETION FROM NPL"|rat_name=="PARTIAL NPL DELETION")
 pdNPL<-subset(NPL,rat_name=="PARTIAL NPL DELETION")
 
-opNPL<- pNPL[order(pNPL$date),] 
-ofNPL<- fNPL[order(fNPL$date),] 
-odNPL<- dNPL[order(dNPL$date),] 
-opdNPL<- dNPL[order(pdNPL$date),] 
+opNPL<- pNPL#[order(pNPL$date),] 
+ofNPL<- fNPL#[order(fNPL$date),] 
+odNPL<- dNPL#[order(dNPL$date),] 
+opdNPL<- dNPL#[order(pdNPL$date),] 
 
 deletedCompletion<-c("GroundwaterEngComplete","ControlsComplete",
                      "InstControlsComplete","GroundwaterComplete","EngControlsComplete")
@@ -725,14 +782,14 @@ finalInstitutional<-c("HealthAdvisory","GroundwaterUseRegulation","DeedNotices",
 deletedContaminant<-c("gw","a","n")
 
 
-sample<-sample[!is.na(sample$sqfeet),]
-sample<-sample[!is.na(sample$YearBuilt),]
-sample<-sample[!is.na(sample$LotSizeSquareFeet),]
-sample<-sample[!is.na(sample$PropertyAddressLatitude),]    
-sample<-sample[!is.na(sample$NoOfStories),] 
+#sample<-sample[!is.na(sample$sqfeet),]
+#sample<-sample[!is.na(sample$YearBuilt),]
+#sample<-sample[!is.na(sample$LotSizeSquareFeet),]
+#sample<-sample[!is.na(sample$PropertyAddressLatitude),]    
+#sample<-sample[!is.na(sample$NoOfStories),] 
 #sample<-sample[!is.na(sample$TotalRooms),] 
 #sample<-subset(sample, TotalRooms>0)
-sample<-sample[!is.na(sample$TotalBedrooms),] 
+#sample<-sample[!is.na(sample$TotalBedrooms),] 
 
 
 d.sample.data<-sample
@@ -765,92 +822,20 @@ for(i in 1:17){
 }
 
 
-PropertyAddressCensusTractAndBlock.f. = factor(d.sample.data$PropertyAddressCensusTractAndBlock)
-PropertyAddressCensusTractAndBlock.dummies = model.matrix(~PropertyAddressCensusTractAndBlock.f.)
-d.sample.data<- cbind(d.sample.data,PropertyAddressCensusTractAndBlock.dummies)
+#PropertyAddressCensusTractAndBlock.f. = factor(d.sample.data$PropertyAddressCensusTractAndBlock)
+#PropertyAddressCensusTractAndBlock.dummies = model.matrix(~PropertyAddressCensusTractAndBlock.f.)
+#d.sample.data<- cbind(d.sample.data,PropertyAddressCensusTractAndBlock.dummies)
 
 saveRDS(d.sample.data, file = paste(path,'repeat10.rds', sep=""), ascii = FALSE, version = NULL,
         compress = TRUE, refhook = NULL)
 
-#repeat sales Bajari
 
-d.sample.data<-d.sample.data[!duplicated(d.sample.data[,c("date","HHID")]),]
-
-rep.row<-function(x,n){
-  matrix(rep(x,each=n),nrow=n)
-}
-A<-rep.row(as.numeric(d.sample.data$HHID),nrow(d.sample.data))
-At<-t(A)
-D<-At-A
-D[D>0]<-2
-D[D<0]<-2
-D[D==0]<-1
-D[D==2]<-0
-sameHouse<-D
-
-A<-rep.row(as.numeric(d.sample.data$TransId),nrow(d.sample.data))
-At<-t(A)
-D<-At-A
-D[D>0]<-2
-D[D<0]<-2
-D[D==0]<-1
-D[D==2]<-0
-sameSale<-D
-
-otherSales<-sameHouse-sameSale
-
-A<-rep.row(d.sample.data$date,nrow(d.sample.data))
-At<-t(A)
-D<-At-A
-D[D<0]<-0
-diffDates<-D
-
-library(matrixStats)
-dumDiffDates<-diffDates*otherSales
-dumDiffDates[dumDiffDates==0]<- 10000000000000000
-#dumDiffDates[dumDiffDates-rowMins(dumDiffDates)>0]<- -1
-dumDiffDates[dumDiffDates-rowMins(dumDiffDates,na.rm = TRUE)==0]<-1
-dumDiffDates[dumDiffDates<0]<-0
-dumDiffDates[dumDiffDates>1]<-0
-dumDiffDates[dumDiffDates==10000000000000000]<-0
-dumDiffDates[rowSums(dumDiffDates)-dim(dumDiffDates)[1]==0]<-0
-
-d.sample.data$preprice<-dumDiffDates%*%d.sample.data$price
-d.sample.data$prelogprice<-dumDiffDates%*%d.sample.data$logprice
-
-for(i in 1:60){
-  d.sample.data[[paste0("binPrePrice",i)]]<-ifelse(d.sample.data$preprice-((i-1)*10000)>=0 & d.sample.data$preprice-(i*10000)<0 ,1,0)
-}
-
-for(i in 1:33){
-  d.sample.data[[paste0("binPreLogPrice",i)]]<-ifelse(d.sample.data$prelogprice-((i-1))>=0 & d.sample.data$prelogprice-(i)<0 ,1,0)
-}
-
-d.sample.data$predate<-dumDiffDates%*%as.numeric(d.sample.data$date)
-d.sample.data$prediffdate<-as.numeric(d.sample.data$date)-d.sample.data$predate
-
-for(i in 1:44){
-  d.sample.data[[paste0("binPreDate",i)]]<-ifelse(d.sample.data$predate-((i-1)*365)>=0 & d.sample.data$predate-(i*365)<0 ,1,0)
-}
-
-for(i in 1:15){
-  d.sample.data[[paste0("binPreDiffDate",i)]]<-ifelse(d.sample.data$prediffdate-((i-1)*365)>=0 & d.sample.data$prediffdate-(i*365)<0 ,1,0)
-}
-
-HHID.f. = factor(d.sample.data$HHID)
-HHID.dummies = model.matrix(~HHID.f.)
-d.sample.data<- cbind(d.sample.data,HHID.dummies)
-
-
-saveRDS(d.sample.data, file = paste(path,'repeat10.rds', sep=""), ascii = FALSE, version = NULL,
-        compress = TRUE, refhook = NULL)
-
-sample<-readRDS(paste(path,'repeat5.rds', sep=""), refhook = NULL)
+sample<-readRDS(paste(path,'repeat10.rds', sep=""), refhook = NULL)
 sampleout<-sample
 
 sample$day<-as.numeric(sample$date)
-fmmatdf<-as.formula(~TransId+ date +lagu10l0sp1d1c30tp1 + treatmentgroup+ YearBuilt + NoOfStories + sqfeet)
-fmmatch<-as.formula(treatmentgroup ~ date+lagu10l0sp1d1c30tp1 + YearBuilt + NoOfStories+  sqfeet)
+fmmatdf<-as.formula(~TransId+ date + treatmentgroup+ YearBuilt + NoOfStories + sqfeet)
+fmmatch<-as.formula(treatmentgroup ~ date+ YearBuilt + NoOfStories+  sqfeet)
 for(j in deletedContaminant){ 
   for(i in 1:dim(odNPL)[1]){
     sample$treatmentgroup<-sampleout[[paste0('treatgroupd',j,i)]]  
@@ -859,6 +844,81 @@ for(j in deletedContaminant){
     if(mean(sample$treatmentgroup)>0 & mean(sample$control)>0){
       sample1<-subset(sample, treatmentgroup==1 | control ==1)
       #sample1$treatmentgroup<-sample1[[paste0('treatmentgroup',j,i)]]
+      
+      if(FALSE){
+      #repeat sales Bajari
+      d.sample.data<-sample1
+      rm(sample1)
+      gc()
+      d.sample.data<-d.sample.data[!duplicated(d.sample.data[,c("date","HHID")]),]
+      
+      rep.row<-function(x,n){
+        matrix(rep(x,each=n),nrow=n)
+      }
+      A<-rep.row(as.numeric(d.sample.data$HHID),nrow(d.sample.data))
+      D<-t(A)-A
+      D[D>0]<-2
+      D[D<0]<-2
+      D[D==0]<-1
+      D[D==2]<-0
+      sameHouse<-D
+      
+      A<-rep.row(as.numeric(d.sample.data$TransId),nrow(d.sample.data))
+      D<-t(A)-A
+      D[D>0]<-2
+      D[D<0]<-2
+      D[D==0]<-1
+      D[D==2]<-0
+      sameSale<-D
+      
+      otherSales<-sameHouse-sameSale
+      rm(sameHouse,sameSale)
+      gc()
+      A<-rep.row(d.sample.data$date,nrow(d.sample.data))
+      D<-t(A)-A
+      D[D<0]<-0
+      diffDates<-D
+      rm(A,D)
+      gc()
+      
+      library(matrixStats)
+      dumDiffDates<-diffDates*otherSales
+      dumDiffDates[dumDiffDates==0]<- 10000000000000000
+      #dumDiffDates[dumDiffDates-rowMins(dumDiffDates)>0]<- -1
+      dumDiffDates[dumDiffDates-rowMins(dumDiffDates,na.rm = TRUE)==0]<-1
+      dumDiffDates[dumDiffDates<0]<-0
+      dumDiffDates[dumDiffDates>1]<-0
+      dumDiffDates[dumDiffDates==10000000000000000]<-0
+      dumDiffDates[rowSums(dumDiffDates)-dim(dumDiffDates)[1]==0]<-0
+      rm(diffDates,otherSales)
+      gc()
+      
+      
+      d.sample.data$preprice<-dumDiffDates%*%d.sample.data$price
+      d.sample.data$prelogprice<-dumDiffDates%*%d.sample.data$logprice
+      
+      for(i in 1:60){
+        d.sample.data[[paste0("binPrePrice",i)]]<-ifelse(d.sample.data$preprice-((i-1)*10000)>=0 & d.sample.data$preprice-(i*10000)<0 ,1,0)
+      }
+      
+      for(i in 1:33){
+        d.sample.data[[paste0("binPreLogPrice",i)]]<-ifelse(d.sample.data$prelogprice-((i-1))>=0 & d.sample.data$prelogprice-(i)<0 ,1,0)
+      }
+      
+      d.sample.data$predate<-dumDiffDates%*%as.numeric(d.sample.data$date)
+      d.sample.data$prediffdate<-as.numeric(d.sample.data$date)-d.sample.data$predate
+      
+      for(i in 1:44){
+        d.sample.data[[paste0("binPreDate",i)]]<-ifelse(d.sample.data$predate-((i-1)*365)>=0 & d.sample.data$predate-(i*365)<0 ,1,0)
+      }
+      
+      for(i in 1:15){
+        d.sample.data[[paste0("binPreDiffDate",i)]]<-ifelse(d.sample.data$prediffdate-((i-1)*365)>=0 & d.sample.data$prediffdate-(i*365)<0 ,1,0)
+      }
+      sample1<-d.sample.data
+      rm(d.sample.data,dumDiffDates)
+      gc()
+      }
       sample1[[paste0('timeFE',j,i)]]<-ifelse(sample1$date-odNPL$date[i]>0 & odNPL$gw[i]==1,1,0)
       sample.df<-data.frame(model.matrix(fmmatdf ,sample1))
       
@@ -866,13 +926,13 @@ for(j in deletedContaminant){
               compress = TRUE, refhook = NULL)
       
       sample.m.df<-subset(sample.df, as.numeric(date-min(sample.df$date[sample.df$treatmentgroup==1]))>0)
-      
+      if(FALSE){
       mdm<- matchit(fmmatch,data = sample.m.df, method = "nearest", distance = "mahalanobis")
       
       mdm.treat <- match.data(mdm, group = "treat")
       mdm.control <- match.data(mdm, group = "control")
       mdm<-rbind(mdm.treat,mdm.control)
-      mdm<-mdm[,c("TransId","lagu10l0sp1d1c30tp1")]
+      mdm<-mdm[,c("TransId","date")]
       mdm.full<-merge(mdm,sample1,all.x = TRUE, by = "TransId")
       
       saveRDS(mdm.full , file = paste(path,'mdmdeletion',j,i,'.rds', sep=""), ascii = FALSE, version = NULL,
@@ -885,11 +945,12 @@ for(j in deletedContaminant){
       psm.treat <- match.data(psm, group = "treat")
       psm.control <- match.data(psm, group = "control")
       psm<-rbind(psm.treat,psm.control)
-      psm<-psm[,c("TransId","lagu10l0sp1d1c30tp1")]
+      psm<-psm[,c("TransId","date")]
       psm.full<-merge(psm,sample1,all.x = TRUE, by = "TransId")
       
       saveRDS(psm.full , file = paste(path,'psmdeletion',j,i,'.rds', sep=""), ascii = FALSE, version = NULL,
               compress = TRUE, refhook = NULL)
+    }
     }
   }
 }
@@ -900,6 +961,7 @@ for(j in 1:dim(odNPL)[1]){
   if(mean(sample$treatmentgroup)>0 & mean(sample$control)>0){
     sample1<-subset(sample, treatmentgroup==1 | control ==1)
     #sample1$treatmentgroup<-sample1[[paste0('treatmentgroup',j)]]
+    
     sample1[[paste0('timeFE',j)]]<-ifelse(sample1$date-odNPL$date[j]>0 & odNPL$gw[j]==1,1,0)
     sample.df<-data.frame(model.matrix(fmmatdf,sample1))
     
@@ -907,13 +969,13 @@ for(j in 1:dim(odNPL)[1]){
             compress = TRUE, refhook = NULL)
     
     sample.m.df<-subset(sample.df, as.numeric(date-min(sample.df$date[sample.df$treatmentgroup==1]))>0)
-    
+    if(FALSE){
     mdm<- matchit(fmmatch,data = sample.m.df, method = "nearest", distance = "mahalanobis")
     
     mdm.treat <- match.data(mdm, group = "treat")
     mdm.control <- match.data(mdm, group = "control")
     mdm<-rbind(mdm.treat,mdm.control)
-    mdm<-mdm[,c("TransId","lagu10l0sp1d1c30tp1")]
+    mdm<-mdm[,c("TransId","date")]
     mdm.full<-merge(mdm,sample1,all.x = TRUE, by = "TransId")
     
     saveRDS(mdm.full , file = paste(path,'mdmdeletion',j,'.rds', sep=""), ascii = FALSE, version = NULL,
@@ -926,11 +988,12 @@ for(j in 1:dim(odNPL)[1]){
     psm.treat <- match.data(psm, group = "treat")
     psm.control <- match.data(psm, group = "control")
     psm<-rbind(psm.treat,psm.control)
-    psm<-psm[,c("TransId","lagu10l0sp1d1c30tp1")]
+    psm<-psm[,c("TransId","date")]
     psm.full<-merge(psm,sample1,all.x = TRUE, by = "TransId")
     
     saveRDS(psm.full , file = paste(path,'psmdeletion',j,'.rds', sep=""), ascii = FALSE, version = NULL,
             compress = TRUE, refhook = NULL)
+  }
   }
 }
 
@@ -941,6 +1004,8 @@ for(j in deletedCompletion){
     if(mean(sample$treatmentgroup)>0 & mean(sample$control)>0){
       sample1<-subset(sample, treatmentgroup==1 | control ==1)
       #sample1$treatmentgroup<-sample1[[paste0('treatmentgroup',j,i)]]
+      
+      
       sample1[[paste0('timeFE',j,i)]]<-ifelse(sample1$date-odNPL$date[i]>0 & odNPL$gw[i]==1,1,0)
       
       sample.df<-data.frame(model.matrix(fmmatdf,sample1))
@@ -949,13 +1014,13 @@ for(j in deletedCompletion){
               compress = TRUE, refhook = NULL)
       
       sample.m.df<-subset(sample.df, as.numeric(date-min(sample.df$date[sample.df$treatmentgroup==1]))>0)
-      
+      if(FALSE){
       mdm<- matchit(fmmatch,  data = sample.m.df, method = "nearest", distance = "mahalanobis")
       
       mdm.treat <- match.data(mdm, group = "treat")
       mdm.control <- match.data(mdm, group = "control")
       mdm<-rbind(mdm.treat,mdm.control)
-      mdm<-mdm[,c("TransId","lagu10l0sp1d1c30tp1")]
+      mdm<-mdm[,c("TransId","date")]
       
       mdm.full<-merge(mdm,sample1,all.x = TRUE, by = "TransId")
       
@@ -968,11 +1033,12 @@ for(j in deletedCompletion){
       psm.treat <- match.data(psm, group = "treat")
       psm.control <- match.data(psm, group = "control")
       psm<-rbind(psm.treat,psm.control)
-      psm<-psm[,c("TransId","lagu10l0sp1d1c30tp1")]
+      psm<-psm[,c("TransId","date")]
       psm.full<-merge(psm,sample1,all.x = TRUE, by = "TransId")
       
       saveRDS(psm.full , file = paste(path,'psm',j,i,'.rds', sep=""), ascii = FALSE, version = NULL,
               compress = TRUE, refhook = NULL)
+    }
     }
   }
 }
@@ -983,6 +1049,7 @@ for(j in finalInstitutional){
     if(mean(sample$treatmentgroup)>0 & mean(sample$control)>0){
       sample1<-subset(sample, treatmentgroup==1 | control ==1)
       #sample1$treatmentgroup<-sample1[[paste0('treatmentgroup',j,i)]]
+     
       sample1[[paste0('timeFE',j,i)]]<-ifelse(sample1$date-ofNPL$date[i]>0 & ofNPL$gw[i]==1,1,0)
       
       sample.df<-data.frame(model.matrix(fmmatdf,sample1))
@@ -991,13 +1058,13 @@ for(j in finalInstitutional){
               compress = TRUE, refhook = NULL)
       
       sample.m.df<-subset(sample.df, as.numeric(date-min(sample.df$date[sample.df$treatmentgroup==1]))>0)
-      
+      if(FALSE){
       mdm<- matchit(fmmatch,data = sample.m.df, method = "nearest", distance = "mahalanobis")
       
       mdm.treat <- match.data(mdm, group = "treat")
       mdm.control <- match.data(mdm, group = "control")
       mdm<-rbind(mdm.treat,mdm.control)
-      mdm<-mdm[,c("TransId","lagu10l0sp1d1c30tp1")]
+      mdm<-mdm[,c("TransId","date")]
       
       mdm.full<-merge(mdm,sample1,all.x = TRUE, by = "TransId")
       
@@ -1011,11 +1078,12 @@ for(j in finalInstitutional){
       psm.treat <- match.data(psm, group = "treat")
       psm.control <- match.data(psm, group = "control")
       psm<-rbind(psm.treat,psm.control)
-      psm<-psm[,c("TransId","lagu10l0sp1d1c30tp1")]
+      psm<-psm[,c("TransId","date")]
       psm.full<-merge(psm,sample1,all.x = TRUE, by = "TransId")
       
       saveRDS(psm.full , file = paste(path,'psm',j,i,'.rds', sep=""), ascii = FALSE, version = NULL,
               compress = TRUE, refhook = NULL)
+      }
     }
   }
 }
