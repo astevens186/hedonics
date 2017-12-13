@@ -28,74 +28,12 @@ options(max.print=1000000)
 memory.limit(10000000000000)
 
 ## read data
-sample.va<- readRDS("P:/Peter/Hedonics/Groundwater/VA_generate_result_fix.rds", refhook = NULL)
-#sample.pa<- readRDS("P:/Peter/Hedonics/Groundwater/PA_generate_result_fix.rds", refhook = NULL)
-sample.ny<- readRDS("P:/Peter/Hedonics/Groundwater/NY_generate_result_fix.rds", refhook = NULL)
-#sample.nj<- readRDS("P:/Peter/Hedonics/Groundwater/NJ_generate_result_fix.rds", refhook = NULL)
-#sample.nc<- readRDS("P:/Peter/Hedonics/Groundwater/NC_generate_result_fix.rds", refhook = NULL)
-#sample.ma<- readRDS("P:/Peter/Hedonics/Groundwater/MA_generate_result_fix.rds", refhook = NULL)
-#sample.mi<- readRDS("P:/Peter/Hedonics/Groundwater/MIHedonics_fix.rds", refhook = NULL)
-#sample.de<- readRDS("P:/Peter/Hedonics/Groundwater/DE_Hedonics.rds", refhook = NULL)
-#sample.ct<-readRDS(paste0(path2,"Hedonics/CTHedonics_withTract.rds", refhook = NULL))
-#sample.de<-readRDS(paste0(path2,"Hedonics/DEHedonics_withTract.rds", refhook = NULL))
-sample.ga<-readRDS(paste0(path2,"Hedonics/GAHedonics_withTract.rds", refhook = NULL))
-#sample.il<-readRDS(paste0(path2,"Hedonics/ILHedonics_withTract.rds", refhook = NULL))
-#sample.in<-readRDS(paste0(path2,"Hedonics/INHedonics_withTract.rds", refhook = NULL))
-#sample.md<-readRDS(paste0(path2,"Hedonics/MDHedonics_withTract.rds", refhook = NULL))
-#sample.me<-readRDS(paste0(path2,"Hedonics/MEHedonics_withTract.rds", refhook = NULL))
-sample.mi<-readRDS(paste0(path2,"Hedonics/MIHedonics_withTract.rds", refhook = NULL))
-#sample.nh<-readRDS(paste0(path2,"Hedonics/NHHedonics_withTract.rds", refhook = NULL))
-#sample.nj<-readRDS(paste0(path2,"Hedonics/NJHedonics_withTract.rds", refhook = NULL))
-sample.oh<-readRDS(paste0(path2,"Hedonics/OHHedonics_withTract.rds", refhook = NULL))
-sample.pa<-readRDS(paste0(path2,"Hedonics/PAHedonics_withTract.rds", refhook = NULL))
-#sample.ri<-readRDS(paste0(path2,"Hedonics/RIHedonics_withTract.rds", refhook = NULL))
-sample.sc<-readRDS(paste0(path2,"Hedonics/SCHedonics_withTract.rds", refhook = NULL))
-#sample.vt<-readRDS(paste0(path2,"Hedonics/VTHedonics_withTract.rds", refhook = NULL))
-#sample.ct<-readRDS(paste0(path2,"Hedonics/CTHedonics_withTract.rds", refhook = NULL))
+sample<- readRDS("P:/Peter/Hedonics/Groundwater/NY_generate_result_fix.rds", refhook = NULL)
 
-
-table(sample.pa$WaterStndCode)
-table(sample.ny$WaterStndCode)
-table(sample.nc$WaterStndCode)
-table(sample.ma$WaterStndCode)
-table(sample.nj$WaterStndCode)
-table(sample.va$WaterStndCode)
-table(sample.mi$WaterStndCode)
-table(sample.ct$WaterStndCode)
-table(sample.de$WaterStndCode)
-table(sample.ga$WaterStndCode)
-table(sample.il$WaterStndCode)
-table(sample.in$WaterStndCode)
-table(sample.md$WaterStndCode)
-table(sample.me$WaterStndCode)
-table(sample.nh$WaterStndCode)
-table(sample.oh$WaterStndCode)
-table(sample.pa$WaterStndCode)
-table(sample.ri$WaterStndCode)
-table(sample.sc$WaterStndCode)
-table(sample.vt$WaterStndCode)
-
-#table(sample.de$WaterStndCode)
-
-sample<-sample.ny
-library(gtools)
-sample<-smartbind(sample.va,sample.ny)#sample.ct,
-#sample.de,
-#sample.ga,#sample.il,
-#sample.in,sample.md,sample.me,sample.mi,sample.nh,
-#sample.oh#sample.mi#sample.pa,sample.ri,
-#sample.sc#,sample.vt
-#)
-
-saveRDS(sample, file = paste(path2,'Tdrop', sep=""), ascii = FALSE, version = NULL,
-        compress = TRUE, refhook = NULL)
-#rm(list=ls())
-gc()
-
+table(sample$WaterStndCode)
 
   s<-"NY"
-  sample<-readRDS(paste0(path2,'Hedonics/',s,'Hedonics_withTract.rds', refhook = NULL))
-  
+ 
   #sample<-readRDS(paste(path2,'tdrop', sep=""), refhook = NULL)
   
   
@@ -278,8 +216,8 @@ gc()
   sample$min <- rowMins(sitedist.mat,na.rm = TRUE)
   
   #keep only houses within 5 km of superfund site
-  dcut<-15000
-  sample <- subset(sample, min<dcut)
+  #dcut<-15000
+  #sample <- subset(sample, min<dcut)
   ## save
   saveRDS(sample, file = paste(path,'repeatpre3',s,'.rds', sep=""), ascii = FALSE, version = NULL,
           compress = TRUE, refhook = NULL)
@@ -292,10 +230,24 @@ gc()
 sample<-readRDS(paste(path,'repeatpre3NY.rds', sep=""), refhook = NULL)
 NPL<-readRDS(paste(path,'npl.rds', sep=""), refhook = NULL)
 
-dcut<-10000
+NPLny<-NPL[NPL$rstate_code=="NY",]
+NPLct<-NPL[NPL$rstate_code=="CT",]
+NPLvt<-NPL[NPL$rstate_code=="VT",]
+NPLma<-NPL[NPL$rstate_code=="MA",]
+NPLpa<-NPL[NPL$rstate_code=="PA",]
+
+NPL<-rbind(NPLny,NPLct,NPLvt,NPLma,NPLpa)
+dcut<-15000
 sample <- subset(sample, min<dcut)
-sample$dist5<-ifelse(sample$min-5000<0,1,0)
-sample$dist4<-ifelse(sample$dcut-4<0,1,0)
+sample$dist10k<-ifelse(sample$min-10000<0,1,0)
+sample$dist8k<-ifelse(sample$min-8000<0,1,0)
+sample$dist6k<-ifelse(sample$min-6000<0,1,0)
+sample$dist5k<-ifelse(sample$min-5000<0,1,0)
+sample$dist4k<-ifelse(sample$min-4000<0,1,0)
+sample$dist3k<-ifelse(sample$min-3000<0,1,0)
+sample$dist2k<-ifelse(sample$min-2000<0,1,0)
+sample$dist1k<-ifelse(sample$min-1000<0,1,0)
+sample$dist500m<-ifelse(sample$min-500<0,1,0)
 #change date format
 sample$date <- as.Date(sample$RecordingDate, format="%Y-%m-%d")                           # transform into "R date"
 #sample$datepos <- as.POSIXlt(sample$date)
@@ -505,43 +457,14 @@ attach(sample)
 deletedCompletion<-c("GroundwaterEngComplete","ControlsComplete",
                      "InstControlsComplete","GroundwaterComplete","EngControlsComplete")
 finalInstitutional<-c("HealthAdvisory","GroundwaterUseRegulation","DeedNotices","DeedRestriction",
-                      "NoticestoStateRegulators",
-                      "DrinkingWaterAdvisory","WaterSupplyUseRestriction","AccessRestriction")
+                      #"NoticestoStateRegulators",
+                      "DrinkingWaterAdvisory","WaterSupplyUseRestriction")#"AccessRestriction")
 for(i in deletedCompletion){
   for(j in 1:dim(odNPL)[1]){
     treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
     treat[is.na(treat)]<-0
     sample[[paste0('treat',i,j)]]<-treat
-    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]-365>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatp1',i,j)]]<-treat
-    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]-(2*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatp2',i,j)]]<-treat
-    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]-(3*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatp3',i,j)]]<-treat
-    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]-(4*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatp4',i,j)]]<-treat
-    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]-(5*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatp5',i,j)]]<-treat
-    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]+365>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatm1',i,j)]]<-treat
-    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]+(2*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatm2',i,j)]]<-treat
-    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]+(3*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatm3',i,j)]]<-treat
-    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]+(4*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatm4',i,j)]]<-treat
-    treat<-ifelse(sample$date-odNPL[[paste0(i)]][j]+(5*365)>0 &get(paste('dNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatm5',i,j)]]<-treat
+
   }
 }
 
@@ -550,36 +473,7 @@ for(i in deletedCompletion){
     treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
     treat[is.na(treat)]<-0
     sample[[paste0('treat',i,'p',j)]]<-treat
-    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]-365>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatp1',i,'p',j)]]<-treat
-    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]-(2*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatp2',i,'p',j)]]<-treat
-    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]-(3*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatp3',i,'p',j)]]<-treat
-    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]-(4*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatp4',i,'p',j)]]<-treat
-    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]-(5*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatp5',i,'p',j)]]<-treat
-    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]+365>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatm1',i,'p',j)]]<-treat
-    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]+(2*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatm2',i,'p',j)]]<-treat
-    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]+(3*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatm3',i,'p',j)]]<-treat
-    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]+(4*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatm4',i,'p',j)]]<-treat
-    treat<-ifelse(sample$date-opdNPL[[paste0(i)]][j]+(5*365)>0 &get(paste('pdNPL',j,sep=""))<dcut,1,0 )
-    treat[is.na(treat)]<-0
-    sample[[paste0('treatm5',i,'p',j)]]<-treat
+    
   }
 }
 
@@ -679,9 +573,9 @@ pretreat[is.na(pretreat)]<-0
 treatgroupd<-rowSums(cbind(treat,pretreat))
 treatgroupd[treatgroupd>0]<-1
 
-control<-ifelse(treatgroupd==1, 0,1)
+sample$control<-ifelse(treatgroupd==1, 0,1)
 for(i in 1:dim(odNPL)[1]){
-  sample$control<-ifelse(sample$control==1 & sample[[paste0('dNPL',i)]]>20000,1,0)
+  sample[[paste0('control',i)]]<-ifelse(sample$control==1 & sample[[paste0('dNPL',i)]]>20000,1,0)
   
 }
 
@@ -773,6 +667,13 @@ saveRDS(sample, file = paste(path,'repeatpr5.rds', sep=""), ascii = FALSE, versi
 sample<-readRDS(paste(path,'repeatpr5.rds', sep=""), refhook = NULL)
 NPL<-readRDS(paste(path,'NPLfull.rds', sep=""), refhook = NULL)
 
+NPLny<-NPL[NPL$rstate_code=="NY",]
+NPLct<-NPL[NPL$rstate_code=="CT",]
+NPLvt<-NPL[NPL$rstate_code=="VT",]
+NPLma<-NPL[NPL$rstate_code=="MA",]
+NPLpa<-NPL[NPL$rstate_code=="PA",]
+
+NPL<-rbind(NPLny,NPLct,NPLvt,NPLma,NPLpa)
 pNPL<-subset(NPL,rat_name=="PROPOSAL TO NPL")
 fNPL<-subset(NPL,rat_name=="FINAL LISTING ON NPL")
 dNPL<-subset(NPL,rat_name=="DELETION FROM NPL"|rat_name=="PARTIAL NPL DELETION")
@@ -835,11 +736,11 @@ for(i in 1:17){
 #PropertyAddressCensusTractAndBlock.dummies = model.matrix(~PropertyAddressCensusTractAndBlock.f.)
 #d.sample.data<- cbind(d.sample.data,PropertyAddressCensusTractAndBlock.dummies)
 
-saveRDS(d.sample.data, file = paste(path,'repeat5new.rds', sep=""), ascii = FALSE, version = NULL,
+saveRDS(d.sample.data, file = paste(path,'repeat5NYwells.rds', sep=""), ascii = FALSE, version = NULL,
         compress = TRUE, refhook = NULL)
 
 
-sample<-readRDS(paste(path,'repeat5wells.rds', sep=""), refhook = NULL)
+sample<-readRDS(paste(path,'repeat5NYwells.rds', sep=""), refhook = NULL)
 sampleout<-sample
 
 sample$day<-as.numeric(sample$date)
@@ -852,13 +753,13 @@ for(j in deletedContaminant){
     #i<-209
     sample$treatmentgroup<-sampleout[[paste0('treatgroupd',j,i)]]  
     #sample[[paste0('treatmentgroup',j)]][is.na(sample[[paste0('treatmentgroup',j)]])]<-0
-    sample$control<-ifelse(sampleout$control==1 & sampleout[[paste0('dNPL',i)]]<70000 & sampleout[[paste0('dNPL',i)]]>30000,1,0)
+    sample$control<-ifelse(sampleout[[paste0('control',i)]] ==1 & sampleout[[paste0('dNPL',i)]]<100000 & sampleout[[paste0('dNPL',i)]]>20000,1,0)
     if(mean(sample$treatmentgroup)>0 & mean(sample$control)>0 &mean(sample[[paste0('treatd',j,i)]])>0){
       sample1<-subset(sample, treatmentgroup==1 | control ==1)
       cut<-500
-      if(dim(sample.1[sample.1$treatgwWL>0,])[1]-cut>0 & dim(sample.1[sample.1$treatgwMU>0,])[1]-cut>0 &
-         dim(sample.1[sample.1$control>0,])[1]-cut>0 & 
-         dim(sample.1[sample.1$treatmentgroup>0,])[1]-dim(sample.1[sample.1$treatdgw>0,])[1]-cut>0){
+      if(dim(sample1[sample1$treatgwWL>0,])[1]-cut>0 & dim(sample1[sample1$treatgwMU>0,])[1]-cut>0 &
+         dim(sample1[sample1$control>0,])[1]-cut>0 & 
+         dim(sample1[sample1$treatmentgroup>0,])[1]-dim(sample1[sample1$treatdgw>0,])[1]-cut>0){
       sample1[[paste0('timeFE',j,i)]]<-ifelse(sample1$date-odNPL$date[i]>0 & odNPL$gw[i]==1,1,0)
       
       saveRDS(sample1, file = paste(path,'fulldeletionbaj',j,i,'.rds', sep=""), ascii = FALSE, version = NULL,
