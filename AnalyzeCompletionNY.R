@@ -15,7 +15,7 @@ pkgTest <- function(x) {
 }
 
 ## These lines load the required packages
-packages <- c("readxl","xtable","splines","ck37r","data.table","matrixStats","tmle","xgboost", "MatchIt","gtools","statar","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
+packages <- c("readxl","rdd","psych","xtable","splines","ck37r","data.table","matrixStats","tmle","xgboost", "MatchIt","gtools","statar","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
 lapply(packages, pkgTest)
 
 #library(statar)
@@ -242,74 +242,180 @@ saveRDS(sample.1, file = paste(path,'repeat5wells.rds', sep=""), ascii = FALSE, 
 
 #sample.1<-readRDS(paste(path,'repeat5wells.rds', sep=""), refhook = NULL)
 psite<-c(2,4,11,12,15,16,19,20,21)
-psite<-16
+psite<-2
 
 samplefull<-readRDS(paste(path,'fulldeletionbajgw',psite,'.rds', sep=""), refhook = NULL)
 
 sample<-samplefull
 sample$treatd0gw<-sample$treatdgw
-dist<-c('10k','8k','6k','5k','4k','3k','2k')#,'1k','500m')
-laglead<-c("",'p1','p2','p3','p4','p5','m1','m2','m3','m4','m5')
-#di<-1
-#ll<-1
-betasdid<-matrix(nrow = length(dist),ncol=length(laglead))
-betases<-matrix(nrow = length(dist),ncol=length(laglead))
-sesdid<-matrix(nrow = length(dist),ncol=length(laglead))
-seses<-matrix(nrow = length(dist),ncol=length(laglead))
-psdid<-matrix(nrow = length(dist),ncol=length(laglead))
-pses<-matrix(nrow = length(dist),ncol=length(laglead))
-for(di in 1:length(dist)){
-  for(ll in 1:length(laglead)){
+dist<-c('12k5','10k','8k','6k','5k','4k','3k','2k','1k','500m')
+#laglead<-c('m5','m4','m3','m2','m1',"",'p1','p2','p3','p4','p5')
+laglead<-c('p5','p4','p3','p2','p1',"",'m1','m2','m3','m4','m5')
+
+di<-5
+ll<-1
+
+
+
+#matrices
+for(i in c("lm","tmle")){
+  for(j in c("t","wl","mu")){
+    for(k in c("did","es")){
+      assign(paste0('betas.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(laglead)))
+      assign(paste0('ses.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(laglead)))
+      assign(paste0('ps.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(laglead)))
+    }
+  }
+}
+
+
+#for(di in 1:length(dist)){
+  #for(ll in 1:length(laglead)){
     dic<-dist[[di]]
     llc<-laglead[[ll]]
-    sample<-samplefull[samplefull[[paste0('dist',dic)]]>0,]
+    #sample<-samplefull[samplefull[[paste0('dist',dic)]]>0,]
 
 #Total Average Treatment Effect
-timefe<-select(sample, starts_with('timefe'))
-treatgroupm<-select(sample, starts_with('treatmentgroup'))
-year<-select(sample, starts_with('year'))
-bin<-select(sample, starts_with('bin'))
+timefe<-dplyr::select(sample, starts_with('timefe'))
+treatgroupm<-dplyr::select(sample, starts_with('treatmentgroup'))
+year<-dplyr::select(sample, starts_with('year'))
+bin<-dplyr::select(sample, starts_with('bin'))
 sample$demlogprice<-demeanlist(sample$logprice,
                                list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
 sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
 sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',psite)]]
+sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',psite)]]
 sample$treatControlsComplete<-sample[[paste0('treatControlsComplete',psite)]]
 sample$timefed<-sample[[paste0('timefed',psite)]]
+sample$timefedControlsComplete<-sample[[paste0('timefedControlsComplete',psite)]]
 sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]]
 
+#exclusive dummies
 
+for(di in 2:length(dist)){
+  dic<-dist[[di]]
+  sample[[paste0('treatexdumdi',dic,'_',dist[[di-1]],'di')]]<-ifelse(sample[[paste0('dist',dic)]]==0& sample[[paste0('dist',dist[[di-1]])]]==1,1,0)*sample[[paste0('treatdgw',psite)]]
+  print(summary( sample[[paste0('treatexdum',dic,'_',dist[[di-1]],'di')]]))
+}
+#sample[[paste0('treatexdumdio',dist[[1]])]]<-ifelse(sample[[paste0('dist',dist[[1]])]]==0,1,0)*sample[[paste0('treatdgw',psite)]]
+sample[[paste0('treatexdumdio',dist[[length(dist)]])]]<-sample[[paste0('dist',dist[[length(dist)]])]]*sample[[paste0('treatdgw',psite)]]
+
+for(ll in 2:length(laglead)){
+llc<-laglead[[ll]]
+sample[[paste0('treatexdumll',llc)]]<-ifelse(sample[[paste0('treatd',laglead[[ll]],'gw',psite)]]==1 & sample[[paste0('treatd',laglead[[ll-1]],'gw',psite)]]==0,1,0)
+}
+sample[[paste0('treatexdumllo',laglead[[1]])]]<-sample[[paste0('treatd',laglead[[1]],'gw',psite)]]
+#sample[[paste0('treatexdumllo',laglead[[length(laglead)]])]]<-ifelse(sample[[paste0('treatd',laglead[[length(laglead)]],'gw',psite)]]==0,1,0)
+
+exdumstr<-'treatexdumll'
+
+exdum<-dplyr::select(sample, starts_with(exdumstr))
+exdumll<-dplyr::select(sample, starts_with('treatexdumll'))
+exdumdi<-dplyr::select(sample, starts_with('treatexdumdi'))
 #TATE<-as.formula(logprice ~ treatdgw+ treatmentgroup+data.matrix(treatgroupm)+ data.matrix(timefe)+ data.matrix(year[,3:25])+ as.factor(HHID))
-feTATE<-model.matrix(~ treatmentgroup+timefed +treatControlsComplete-1,sample)
+feTATE<-model.matrix(~ treatmentgroup+#timefed +
+                       treatControlsComplete+#timefedControlsComplete+
+                       aftfinalnpl+#timefinalnplfe
+                       data.matrix(exdum)+
+                     -1,sample)
+feTATE<-as.matrix(feTATE[,SD(feTATE)>0])
+feTATE<-as.matrix(feTATE[,!duplicated(cor(feTATE))])
+
 xTATE<-model.matrix(~ LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                      sqfeet+day+
+                      sqfeet+#day+
                       data.matrix(year[,4:25])-1,sample)
 xcTATE<-model.matrix(~(data.matrix(bin)+
                        poly(LotSizeSquareFeet,4) + poly(YearBuilt,4) +   
                        poly(sqfeet,4))^3-1,sample)
+xdidtate<-model.matrix(~#treatst+
+                         treatmentgroup+#timefed +
+                         treatControlsComplete+#timefedControlsComplete+
+                         aftfinalnpl+#timefinalnplfe+
+                         data.matrix(exdum)+
+                         LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
+                         sqfeet+#day+#poly(day,5)+(timefed*poly(day,5))+
+                         data.matrix(year[,3:25])+as.factor(PropertyAddressCensusTractAndBlock),sample)
 
-lm.TATE<-felm(logprice ~treatst+ LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                sqfeet+ treatmentgroup+ aftpropnpl+aftfinalnpl+treatControlsComplete+
-               data.matrix(year[,3:25])|as.factor(PropertyAddressCensusTractAndBlock),sample)
+results.lm.t.did<-lm(sample$logprice ~data.matrix(xdidtate)-1)
+summary(results.lm.t.did)
+coefdid<-as.matrix(results.lm.t.did$coefficients)
+coefdid[is.na(coefdid),]<-0
+sample$crdid<-sample$logprice-xdidtate[,-c(2:5)]%*%coefdid[-c(2:5),]
+
+timetreat<-odNPL$date[psite]
+
+ggplot() +
+  geom_point(data=subset(sample,treatmentgroup==1), aes(x=date, y=crdid, color= "Treatment Group")) +
+  geom_point(data=subset(sample,treatmentgroup==0), aes(x=date, y=crdid, color= "Control Group")) +
+  stat_smooth(method = 'loess', formula = y ~ x  ,data=subset(sample,treatmentgroup==1&timefed==1),se= FALSE,  aes(x=date, y=crdid),color= "blue") +
+  stat_smooth(method = 'loess', formula = y ~ x  ,data=subset(sample,treatmentgroup==1&timefed==0),se= FALSE,  aes(x=date, y=crdid),color= "blue") +
+  
+  stat_smooth(method = 'loess', formula = y ~ x  ,data=subset(sample,treatmentgroup==0&timefed==1),se= FALSE,  aes(x=date, y=crdid),color= "red") +
+  stat_smooth(method = 'loess', formula = y ~ x  ,data=subset(sample,treatmentgroup==0&timefed==0),se= FALSE,  aes(x=date, y=crdid),color= "red") +
+  
+  xlab('Date') + labs(color="Legend") +  geom_vline(xintercept=as.numeric(timetreat))+
+  ylab('Monthly Average Log Housing Price')
+
+ggsave(file=paste(path,'lmdid',psite,dic, llc, '.png', sep=""),height = 6,width = 6)
+
+
 tsample<-sample[control==0,]
-year<-select(tsample, starts_with('year'))
-t.lm.TATE<-felm(logprice ~treatst+ LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                sqfeet+ treatmentgroup+ aftpropnpl+aftfinalnpl+treatControlsComplete+
-                + data.matrix(year[,3:25])|as.factor(PropertyAddressCensusTractAndBlock),tsample)
+feTATE2<-feTATE[sample$control==0,]
+year<-dplyr::select(tsample, starts_with('year'))
+exdum<-dplyr::select(tsample, starts_with(exdumstr))
+
+feTATEes<-model.matrix(~ treatControlsComplete+aftfinalnpl+
+                         as.matrix(exdum)-1,tsample)
+feTATEes<-as.matrix(feTATEes[,SD(feTATEes)>0])
+if(dim(feTATEes)[2]>1){
+  feTATEes<-feTATEes[,!duplicated(cor(feTATEes))]
+}
+xestate<-model.matrix(~#treatst+
+                        treatmentgroup+#timefed +
+                        treatControlsComplete+#timefedControlsComplete+
+                        aftfinalnpl+#timefinalnplfe+ 
+                        data.matrix(feTATEes)+
+                         LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
+                         sqfeet+poly(day,5)+bs(day, df = 10)+
+                         data.matrix(year[,3:25])+as.factor(PropertyAddressCensusTractAndBlock),tsample)
+
+results.lm.t.es<-lm(tsample$logprice ~data.matrix(xestate)-1)
+summary(results.lm.t.es)
+coefes<-as.matrix(results.lm.t.es$coefficients)
+coefes[is.na(coefes),]<-0
+tsample$cres<-tsample$logprice-xestate[,-c(2:5)]%*%coefes[-c(2:5),]
+
+timetreat<-odNPL$date[psite]
+ggplot() +
+  geom_point(data=subset(tsample,treatmentgroup==1), aes(x=date, y=cres, color= "Treatment Group")) +
+  stat_smooth(method = 'loess', formula = y ~ x ,data=subset(tsample,treatmentgroup==1&timefed==1),se= FALSE,  aes(x=date, y=cres),color= "blue") +
+  stat_smooth(method = 'loess', formula = y ~ x  ,data=subset(tsample,treatmentgroup==1&timefed==0),se= FALSE,  aes(x=date, y=cres),color= "blue") +
+  
+  xlab('Date') + labs(color="Legend") +  geom_vline(xintercept=as.numeric(timetreat))+
+  ylab('Monthly Average Log Housing Price')
+
+ggsave(file=paste(path,'lmes',psite,dic, llc, '.png', sep=""),height = 6,width = 6)
+
+tsample$treatst<-exdum[,2]
+ints1<-as.matrix(tsample$day*tsample$treatst)
+cutpoint1<-min(ints1[ints1>0,])
+ints2<-as.matrix(tsample$day*ifelse(tsample$treatst>0,0,1))
+cutpoint2<-max(ints2[ints2>0,])
+cutpoint<-(cutpoint1+cutpoint2)/2
+if(FALSE){
+t.k.TATE<-RDestimate(logprice ~day|treatControlsComplete+
+                       timefedControlsComplete+aftfinalnpl+timefinalnplfe+ LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
+             sqfeet, data=tsample, subset = NULL, cutpoint = cutpoint, bw =100,
+           kernel = "tricube", se.type = "HC1", cluster = NULL,
+           verbose = TRUE, model = FALSE, frame = FALSE)
+summary(t.k.TATE)
+plot(t.k.TATE)
+}
 
 #assign(paste0('lm.TATE.',k,i),lm.TATE)
-summary(lm.TATE)
-summary(t.lm.TATE)
+summary(results.lm.t.did)
+summary(results.lm.t.es)
 
-betasdid[di,ll]<-as.numeric(coef(summary(lm.TATE))[,"Estimate"][1])
-betases[di,ll]<-as.numeric(coef(summary(t.lm.TATE))[,"Estimate"][1])
-sesdid[di,ll]<-as.numeric(coef(summary(lm.TATE))[,"Std. Error"][1])
-seses[di,ll]<-as.numeric(coef(summary(t.lm.TATE))[,"Std. Error"][1])
-psdid[di,ll]<-as.numeric(coef(summary(lm.TATE))[,"Pr(>|t|)"][1])
-pses[di,ll]<-as.numeric(coef(summary(t.lm.TATE))[,"Pr(>|t|)"][1])
-  
-#  b.ds.os<-coef(summary(fit.ds.os))[,"Estimate."][1]
-#s.ds.os<-coef(summary(fit.ds.os))[,"Std. Error"][1]
-#p.ds.os<-coef(summary(fit.ds.os))[,"Pr(>|t|)"][1]
 
 sdf<-5
 lat<-sample$PropertyAddressLatitude
@@ -322,8 +428,9 @@ xcTATE<-cbind(splat,splong,spint,lat,long)
 W<-cbind(xcTATE,xTATE,feTATE)
 A<-sample$treatst
 V<-feTATE
+Time<-sample$day
 
-result.tmle <- tmleMSM(Y = sample$logprice, A = A, W = W, V = V,
+results.tmle.t.did <- tmleMSM(Y = sample$logprice, A = A, W = W, V = V, #T= Time,
                       MSM = "A + V",family="gaussian", 
                       Q.SL.library = SL.library2$as.list(),
                       g.SL.library = PS.library2$as.list(),
@@ -335,11 +442,80 @@ result.tmle <- tmleMSM(Y = sample$logprice, A = A, W = W, V = V,
                       alpha = 0.90,
                       inference = TRUE,
                       verbose=TRUE)
-print(result.tmle)
+print(results.tmle.t.did)
 
+
+
+sdf<-5
+lat<-sample$PropertyAddressLatitude
+long<-sample$PropertyAddressLongitude
+splat<-bs(lat, df = sdf)
+splong<-bs(long, df = sdf)
+spint<-model.matrix(~splat:splong)
+
+xcTATE<-cbind(splat,splong,spint,lat,long,poly(sample$day,5),bs(sample$day, df = 10))
+feTATEes<-model.matrix(~ treatControlsComplete+aftfinalnpl+
+                         as.matrix(exdum)-1,tsample)
+feTATEes<-as.matrix(feTATEes[,SD(feTATEes)>0])
+if(dim(feTATEes)[2]>1){
+  feTATEes<-feTATEes[,!duplicated(cor(feTATEes))]
+}
+W<-cbind(xcTATE[sample$control==0,],xTATE[sample$control==0,],feTATEes)
+A<-sample[control==0,treatst]
+V<-feTATEes
+Time<-sample[control==0,day]
+
+results.tmle.t.es <- tmleMSM(Y = tsample$logprice, A = A, W = W, V = V, #T= Time,
+                       MSM = "A + V",family="gaussian", 
+                       Q.SL.library = SL.library2$as.list(),
+                       g.SL.library = PS.library2$as.list(),
+                       #Qform = Y ~ A+V+W,
+                       gform = A~1,
+                       #hAVform = A~ as.matrix(xTATE),
+                       ub = 20,
+                       V_SL =5,
+                       alpha = 0.90,
+                       inference = TRUE,
+                       verbose=TRUE)
+print(results.tmle.t.es)
+
+
+
+betas.tmle.t.did[di,ll]<-results.tmle.t.did$psi["A"]
+ses.tmle.t.did[di,ll]<-results.tmle.t.did$se["A"]
+ps.tmle.t.did[di,ll]<-results.tmle.t.did$pvalue["A"]
+
+betas.tmle.t.es[di,ll]<-results.tmle.t.es$psi["A"]
+ses.tmle.t.es[di,ll]<-results.tmle.t.es$se["A"]
+ps.tmle.t.es[di,ll]<-results.tmle.t.es$pvalue["A"]
+    
+betas.lm.t.did[di,ll]<-as.numeric(coef(summary(results.lm.t.did))[,"Estimate"][2])
+betas.lm.t.es[di,ll]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][2])
+ses.lm.t.did[di,ll]<-as.numeric(coef(summary(results.lm.t.did))[,"Std. Error"][2])
+ses.lm.t.es[di,ll]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][2])
+ps.lm.t.did[di,ll]<-as.numeric(coef(summary(results.lm.t.did))[,"Pr(>|t|)"][2])
+ps.lm.t.es[di,ll]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][2])
+
+print(paste0('distance = ',dic))
+print(paste0('laglead = ',llc))
 
   }
-}
+#}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #Well Average Treatment Effect
 sample$treatdgwWL<- sample$treatdgw * sample$WaterStndCode.fWL
 sample$treatgroupWL<-sample$treatmentgroup * sample$WaterStndCode.fWL
