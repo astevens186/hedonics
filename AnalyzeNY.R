@@ -70,7 +70,7 @@ xgboost <- create.Learner("SL.xgboost", tune = xgboost.tune, detailed_names = T,
 length(xgboost$names)
 xgboost$names
 
-xgboost.tune2 <- list(ntrees = c(50, 100),
+xgboost.tune2 <- list(ntrees = c(50),
                       max_depth = c(5,15),
                       shrinkage = c( 0.01,0.1),
                       minobspernode = c(10))
@@ -94,7 +94,7 @@ glmnet <- create.Learner("SL.glmnet", tune = glmnet.tune, detailed_names = T, na
 length(glmnet$names)
 glmnet$names
 
-glmnet.tune2 <- list(alpha = c(0,.5,1))
+glmnet.tune2 <- list(alpha = c(0,1))
 
 # Set detailed names = T so we can see the configuration for each function.
 # Also shorten the name prefix.
@@ -242,9 +242,11 @@ saveRDS(sample.1, file = paste(path,'repeat5wells.rds', sep=""), ascii = FALSE, 
 
 #sample.1<-readRDS(paste(path,'repeat5wells.rds', sep=""), refhook = NULL)
 psitel<-c(2,4,11,12,15,16,19,20,21)
-psitel<-c(11,12,15,16,19,20,21)
+psitel<-c(2,4,12,15,16)
 
-#psite<-16
+psitel<-c(15,16)
+
+#psite<-21
 for(psite in psitel){
 samplefull<-readRDS(paste(path,'fulldeletionbajgw',psite,'.rds', sep=""), refhook = NULL)
 
@@ -252,9 +254,12 @@ sample<-samplefull
 sample$treatd0gw<-sample$treatdgw
 #dist<-c('10k','8k','6k','5k','4k','3k','2k')#,'1k','500m')
 
-dist<-c('10k','8k','6k','4k','2k')#,'1k','500m')
+#dist<-c('10k','8k','6k','4k','2k')#,'1k','500m')
+dist<-c('4k','2k')#,'1k','500m')
+
 laglead<-c("")
-#di<-4
+treatl<-c('TATE','MUATE','WLATE')
+#di<-5
 #ll<-1
 
 for(buf in 1:2){
@@ -269,24 +274,28 @@ for(buf in 1:2){
 for(i in c("lm","tmle")){
     for(j in c("t","wl","mu")){
         for(k in c("did","es")){
-            assign(paste0('betas.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(laglead)))
-            assign(paste0('ses.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(laglead)))
-            assign(paste0('ps.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(laglead)))
+            assign(paste0('betas.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(treatl)))
+            assign(paste0('ses.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(treatl)))
+            assign(paste0('ps.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(treatl)))
         
-            assign(paste0('cc.betas.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(laglead)))
-            assign(paste0('cc.ses.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(laglead)))
-            assign(paste0('cc.ps.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(laglead)))
+            assign(paste0('cc.betas.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(treatl)))
+            assign(paste0('cc.ses.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(treatl)))
+            assign(paste0('cc.ps.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(treatl)))
             
               }
       }
-  }
-
-for(ll in 1:length(laglead)){
+}
+  
+for(treat in  1:length(treatl)){
+  treatc<-treatl[[treat]]
+#for(ll in 1:length(laglead)){
 for(di in 1:length(dist)){
     dic<-dist[[di]]
+    ll<-1
     llc<-laglead[[ll]]
     sample<-samplefull[samplefull[[paste0('dist',dic)]]>0,]
-    
+  
+      if(treatc=='TATE'){
     #Total Average Treatment Effect
     timefe<-select(sample, starts_with('timefe'))
     treatgroupm<-select(sample, starts_with('treatmentgroup'))
@@ -303,9 +312,59 @@ for(di in 1:length(dist)){
     sample$timefedControlsComplete<-sample[[paste0('timefedControlsComplete',psite)]]
     sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
     sample$treatexCC<-ifelse(sample$treatControlsComplete==1 &sample$treatst==0,1,0)
-    
-    
-    
+      }
+      if(treatc=='MUATE'){
+        #Municipal ATE
+        sample$treatdgwMU<- sample[[paste0('treatd',llc,'gw',psite)]]* sample$WaterStndCode.fMU
+        sample$treatgroupMU<-sample$treatmentgroup * sample$WaterStndCode.fMU
+        sample$controlMU<-sample$control*sample$WaterStndCode.fMU
+        
+        sample$sample.MUATE<-sample$control+sample$treatgroupMU
+        
+        sample<-subset(sample, sample.MUATE==1)
+        timefe<-select(sample, starts_with('timefe'))
+        treatgroupm<-select(sample, starts_with('treatmentgroup'))
+        year<-select(sample, starts_with('year'))
+        bin<-select(sample, starts_with('bin'))
+        sample$demlogprice<-demeanlist(sample$logprice,
+                                       list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
+        sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
+        
+        #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
+        #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
+        sample$treatControlsComplete<-sample[[paste0('treatControlsComplete',psite)]]
+        sample$timefed<-sample[[paste0('timefed',psite)]]
+        sample$timefedControlsComplete<-sample[[paste0('timefedControlsComplete',psite)]]
+        sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
+        sample$treatexCC<-ifelse(sample$treatControlsComplete==1 &sample$treatst==0,1,0)
+      }
+      if(treatc=='WLATE'){
+        #Municipal ATE
+        sample$treatdgwWL<- sample[[paste0('treatd',llc,'gw',psite)]]* sample$WaterStndCode.fWL
+        sample$treatgroupWL<-sample$treatmentgroup * sample$WaterStndCode.fWL
+        sample$controlWL<-sample$control*sample$WaterStndCode.fWL
+        
+        sample$sample.WLATE<-sample$control+sample$treatgroupWL
+        
+        sample<-subset(sample, sample.WLATE==1)
+        timefe<-select(sample, starts_with('timefe'))
+        treatgroupm<-select(sample, starts_with('treatmentgroup'))
+        year<-select(sample, starts_with('year'))
+        bin<-select(sample, starts_with('bin'))
+        sample$demlogprice<-demeanlist(sample$logprice,
+                                       list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
+        sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
+        
+        #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
+        #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
+        sample$treatControlsComplete<-sample[[paste0('treatControlsComplete',psite)]]
+        sample$timefed<-sample[[paste0('timefed',psite)]]
+        sample$timefedControlsComplete<-sample[[paste0('timefedControlsComplete',psite)]]
+        sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
+        sample$treatexCC<-ifelse(sample$treatControlsComplete==1 &sample$treatst==0,1,0)
+      }
+      
+    if(mean(sample$treatst)>0){
     
     #TATE<-as.formula(logprice ~ treatdgw+ treatmentgroup+data.matrix(treatgroupm)+ data.matrix(timefe)+ data.matrix(year[,3:25])+ as.factor(HHID))
     
@@ -338,7 +397,7 @@ for(di in 1:length(dist)){
     X <- X[,keep]
     
     results.lm.t.did<-felm(logprice ~X|as.factor(PropertyAddressCensusTractAndBlock),sample)
-    summary(results.lm.t.did)
+    #summary(results.lm.t.did)
     nocc<-0
     notg<-0
     if(is.na(results.lm.t.did$coefficients["Xtreatst",])){
@@ -354,7 +413,7 @@ for(di in 1:length(dist)){
       X <- X[,keep]
       
       results.lm.t.did<-felm(logprice ~X|as.factor(PropertyAddressCensusTractAndBlock),sample)
-      summary(results.lm.t.did)
+      #summary(results.lm.t.did)
       nocc<-1
       notg<-0
     }
@@ -371,12 +430,13 @@ for(di in 1:length(dist)){
       X <- X[,keep]
       
       results.lm.t.did<-felm(logprice ~X|as.factor(PropertyAddressCensusTractAndBlock),sample)
-      summary(results.lm.t.did)
+      #summary(results.lm.t.did)
       nocc<-1
       notg<-1
     }
     
     tsample<-sample[control==0,]
+    if(dim(data.matrix(tsample))[1]>40){
     year<-select(tsample, starts_with('year'))
     
     X<-model.matrix(~ treatst+treatexCC+
@@ -390,7 +450,7 @@ for(di in 1:length(dist)){
     X <- X[,keep]
     
     results.lm.t.es<-felm(logprice ~X|as.factor(PropertyAddressCensusTractAndBlock),tsample)
-    summary(results.lm.t.es)
+    #summary(results.lm.t.es)
     
     if(is.na(results.lm.t.es$coefficients["Xtreatst",])){
       X<-model.matrix(~ treatst+
@@ -404,9 +464,9 @@ for(di in 1:length(dist)){
       X <- X[,keep]
       
       results.lm.t.es<-felm(logprice ~X|as.factor(PropertyAddressCensusTractAndBlock),tsample)
-      summary(results.lm.t.es)
+      #summary(results.lm.t.es)
     }
-    
+    }
     
     #assign(paste0('lm.TATE.',k,i),lm.TATE)
     summary(results.lm.t.did)
@@ -476,7 +536,7 @@ for(di in 1:length(dist)){
                                   g.SL.library = PS.library2$as.list(),
                                   #Qform = Y ~ A+V+W,
                                   gform = A~1,
-                                  #hAVform = A~ as.matrix(xTATE),
+                                  #hAVform = A~ 1,
                                   ub = 20,
                                   V_SL =5,
                                   alpha = 0.90,
@@ -506,7 +566,8 @@ for(di in 1:length(dist)){
     (keep <- qr.X$pivot[seq_len(rnkX)])
     ## 1 2 4 5 
     feTATEes <- feTATEes[,keep]
-    if(nocc==0){
+    if(nocc==0&dim(as.matrix(feTATEes))[2]>0){
+      if(dim(data.matrix(tsample))[1]>40){
     W<-cbind(xcTATE[sample$control==0,],xTATE[sample$control==0,],feTATEes)
     
     A<-sample[control==0,treatst]
@@ -519,7 +580,7 @@ for(di in 1:length(dist)){
                                  g.SL.library = PS.library2$as.list(),
                                  #Qform = Y ~ A+V+W,
                                  gform = A~1,
-                                 #hAVform = A~ as.matrix(xTATE),
+                                 #hAVform = A~ 1,
                                  ub = 20,
                                  V_SL =5,
                                  alpha = 0.90,
@@ -527,57 +588,59 @@ for(di in 1:length(dist)){
                                  verbose=TRUE)
     print(results.tmle.t.es)
     
-    betas.tmle.t.es[di,ll]<-results.tmle.t.es$psi["A"]
-    ses.tmle.t.es[di,ll]<-results.tmle.t.es$se["A"]
-    ps.tmle.t.es[di,ll]<-results.tmle.t.es$pvalue["A"]
+    betas.tmle.t.es[di,treat]<-results.tmle.t.es$psi["A"]
+    ses.tmle.t.es[di,treat]<-results.tmle.t.es$se["A"]
+    ps.tmle.t.es[di,treat]<-results.tmle.t.es$pvalue["A"]
     
-    cc.betas.tmle.t.es[di,ll]<-results.tmle.t.es$psi["V"]
-    cc.ses.tmle.t.es[di,ll]<-results.tmle.t.es$se["V"]
-    cc.ps.tmle.t.es[di,ll]<-results.tmle.t.es$pvalue["V"]
+    cc.betas.tmle.t.es[di,treat]<-results.tmle.t.es$psi["V"]
+    cc.ses.tmle.t.es[di,treat]<-results.tmle.t.es$se["V"]
+    cc.ps.tmle.t.es[di,treat]<-results.tmle.t.es$pvalue["V"]
     
     
+    }}
+    
+    
+    
+    betas.tmle.t.did[di,treat]<-results.tmle.t.did$psi["A"]
+    ses.tmle.t.did[di,treat]<-results.tmle.t.did$se["A"]
+    ps.tmle.t.did[di,treat]<-results.tmle.t.did$pvalue["A"]
+    
+    if(nocc==0 &notg==0){
+    cc.betas.tmle.t.did[di,treat]<-results.tmle.t.did$psi["VtreatexCC"]
+    cc.ses.tmle.t.did[di,treat]<-results.tmle.t.did$se["VtreatexCC"]
+    cc.ps.tmle.t.did[di,treat]<-results.tmle.t.did$pvalue["VtreatexCC"]
     }
     
+    betas.lm.t.did[di,treat]<-as.numeric(coef(summary(results.lm.t.did))[,"Estimate"][2])
+    betas.lm.t.es[di,treat]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][2])
+    ses.lm.t.did[di,treat]<-as.numeric(coef(summary(results.lm.t.did))[,"Std. Error"][2])
+    ses.lm.t.es[di,treat]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][2])
+    ps.lm.t.did[di,treat]<-as.numeric(coef(summary(results.lm.t.did))[,"Pr(>|t|)"][2])
+    ps.lm.t.es[di,treat]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][2])
     
-    
-    betas.tmle.t.did[di,ll]<-results.tmle.t.did$psi["A"]
-    ses.tmle.t.did[di,ll]<-results.tmle.t.did$se["A"]
-    ps.tmle.t.did[di,ll]<-results.tmle.t.did$pvalue["A"]
-    
-    cc.betas.tmle.t.did[di,ll]<-results.tmle.t.did$psi["VtreatexCC"]
-    cc.ses.tmle.t.did[di,ll]<-results.tmle.t.did$se["VtreatexCC"]
-    cc.ps.tmle.t.did[di,ll]<-results.tmle.t.did$pvalue["VtreatexCC"]
-    
-    
-    betas.lm.t.did[di,ll]<-as.numeric(coef(summary(results.lm.t.did))[,"Estimate"][2])
-    betas.lm.t.es[di,ll]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][2])
-    ses.lm.t.did[di,ll]<-as.numeric(coef(summary(results.lm.t.did))[,"Std. Error"][2])
-    ses.lm.t.es[di,ll]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][2])
-    ps.lm.t.did[di,ll]<-as.numeric(coef(summary(results.lm.t.did))[,"Pr(>|t|)"][2])
-    ps.lm.t.es[di,ll]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][2])
-    
-    cc.betas.lm.t.did[di,ll]<-as.numeric(coef(summary(results.lm.t.did))[,"Estimate"][3])
-    cc.betas.lm.t.es[di,ll]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][3])
-    cc.ses.lm.t.did[di,ll]<-as.numeric(coef(summary(results.lm.t.did))[,"Std. Error"][3])
-    cc.ses.lm.t.es[di,ll]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][3])
-    cc.ps.lm.t.did[di,ll]<-as.numeric(coef(summary(results.lm.t.did))[,"Pr(>|t|)"][3])
-    cc.ps.lm.t.es[di,ll]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][3])
+    cc.betas.lm.t.did[di,treat]<-as.numeric(coef(summary(results.lm.t.did))[,"Estimate"][3])
+    cc.betas.lm.t.es[di,treat]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][3])
+    cc.ses.lm.t.did[di,treat]<-as.numeric(coef(summary(results.lm.t.did))[,"Std. Error"][3])
+    cc.ses.lm.t.es[di,treat]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][3])
+    cc.ps.lm.t.did[di,treat]<-as.numeric(coef(summary(results.lm.t.did))[,"Pr(>|t|)"][3])
+    cc.ps.lm.t.es[di,treat]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][3])
     
     print(paste0('distance = ',dic))
-    print(paste0('laglead = ',llc))
-    
+    print(paste0('treat = ',treatc))
+    print(paste0('site = ',psite))
+    }
   }
 }
-
+for(statchange in c('','cc.')){
 for(meth in c('lm','tmle')){
   for(inf in c('did','es')){
   #meth<-'tmle'
-p<-get(paste0('ps.',meth,'.t.',inf))
+p<-get(paste0(statchange,'ps.',meth,'.t.',inf))
 mystars <- ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "* ", ifelse(p < .1, "^\\bullet  ", " "))))
 
-pb<-exp(get(paste0('betas.',meth,'.t.',inf)))-1
+pb<-exp(get(paste0(statchange,'betas.',meth,'.t.',inf)))-1
 rpb<-round(pb,3)
-se<-round(exp(get(paste0('ps.',meth,'.t.',inf)))-1,3)
+se<-round(exp(get(paste0(statchange,'ses.',meth,'.t.',inf)))-1,3)
 
 srpb <- matrix(paste(rpb, mystars, sep=""), ncol=dim(pb)[2] )
 nsrpb<-rbind(c("",laglead),cbind(dist,srpb))
@@ -602,7 +665,8 @@ for(i in 1:dim(results.mat)[1]){
 xtable(results.mat)
 print.xtable(xtable(results.mat),include.rownames=FALSE, 
              include.colnames=FALSE, sanitize.text.function = identity,
-             type="latex", file=paste0(path,meth,inf,psite,"buffer",buf,".tex"))
+             type="latex", file=paste0(path,meth,inf,psite,statchange,"buffer",buf,".tex"))
+}
 }
 }
 }
