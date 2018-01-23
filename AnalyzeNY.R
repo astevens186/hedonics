@@ -15,7 +15,7 @@ pkgTest <- function(x) {
 }
 
 ## These lines load the required packages
-packages <- c("readxl","rdd","psych","xtable","splines","ck37r","data.table","matrixStats","tmle","xgboost", "MatchIt","gtools","statar","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
+packages <- c("readxl","Hmisc","rdd","Matrix","psych","xtable","splines","ck37r","data.table","matrixStats","tmle","xgboost", "MatchIt","gtools","statar","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
 lapply(packages, pkgTest)
 
 #library(statar)
@@ -305,7 +305,95 @@ psitel<-c(2,12,15,16)
 
 psitel<-c(2,15,16)
 
-#psite<-21
+#psite<-2
+for(psite in psitel){
+  data<-readRDS(paste(path,'fulldeletionbajgw',psite,'.rds', sep=""), refhook = NULL)
+  
+  #repeat sales Bajari
+  #d.sample.data<-sample1
+  #rm(sample1)
+  
+  gc()
+  data<-data[data$price>0,]
+  data<-data[!duplicated(data[,c("date","HHID")]),]
+  sample.data<-data[,c("date","HHID","TransId","price","logprice")]
+  quants<-20
+  sample.data$indx<- factor(as.numeric(cut2(as.numeric(sample.data$HHID), g=quants)))
+  sample<-NULL
+  for(i in 1:quants){
+    #i<-1
+    d.sample.data<-sample.data[indx==i,]
+  
+  rep.row<-function(x,n){
+    matrix(rep(x,each=n),nrow=n)
+  }
+  D<-rep.row(as.numeric(d.sample.data$HHID),nrow(d.sample.data))
+  D<-t(D)-D
+  D[D>0]<-2
+  D[D<0]<-2
+  D[D==0]<-1
+  D[D==2]<-0
+  sameHouse<-D
+  
+  D<-rep.row(as.numeric(d.sample.data$TransId),nrow(d.sample.data))
+ 
+  D<-t(D)-D
+  D[D>0]<-2
+  D[D<0]<-2
+  D[D==0]<-1
+  D[D==2]<-0
+  sameSale<-D
+  
+  otherSales<-sameHouse-sameSale
+  rm(sameHouse,sameSale)
+  gc()
+  D<-rep.row(d.sample.data$date,nrow(d.sample.data))
+  D<-t(D)-D
+  D[D<0]<-0
+  diffDates<-D
+  rm(D)
+  gc()
+  
+  library(matrixStats)
+  dumDiffDates<-diffDates*otherSales
+  dumDiffDates[dumDiffDates==0]<- 10000000000000000
+  #dumDiffDates[dumDiffDates-rowMins(dumDiffDates)>0]<- -1
+  dumDiffDates[dumDiffDates-rowMins(dumDiffDates,na.rm = TRUE)==0]<-1
+  dumDiffDates[dumDiffDates<0]<-0
+  dumDiffDates[dumDiffDates>1]<-0
+  dumDiffDates[dumDiffDates==10000000000000000]<-0
+  dumDiffDates[rowSums(dumDiffDates)-dim(dumDiffDates)[1]==0]<-0
+  rm(diffDates,otherSales)
+  gc()
+  
+  
+  d.sample.data$preprice<-dumDiffDates%*%d.sample.data$price
+  d.sample.data$prelogprice<-dumDiffDates%*%d.sample.data$logprice
+  
+  d.sample.data$predate<-dumDiffDates%*%as.numeric(d.sample.data$date)
+  d.sample.data$prediffdate<-as.numeric(d.sample.data$date)-d.sample.data$predate
+  d.sample.data$presstatusd<-ifelse(d.sample.data$predate-as.numeric(odNPL$date[i])>0,1,0)
+  d.sample.data$presstatuscc<-ifelse(d.sample.data$predate-as.numeric(odNPL$ControlsComplete[i])>0,1,0)
+  
+  
+  d.sample.data<-d.sample.data[d.sample.data$predate>0,]
+  #sample1<-sample1[sample1$presstatus<1 ,]
+  #sample1<-sample1[sample1$treatdgw<1 ,]
+  
+  
+  d.sample.data$difflogprice<-d.sample.data$logprice-d.sample.data$prelogprice
+  
+  sample<-rbind(sample,d.sample.data)
+  }
+  library(data.table)
+  data.dt<-data.table(data)
+  sample.dt<-data.table(sample)
+  sample.new<-merge(data.dt,sample.dt,all.x=TRUE,by="TransId")
+  
+  saveRDS(sample.new, file = paste(path,'fullbaj',psite,'.rds', sep=""), ascii = FALSE, version = NULL,
+          compress = TRUE, refhook = NULL)
+ }
+
 for(psite in psitel){
   samplefull<-readRDS(paste(path,'fulldeletionbajgw',psite,'.rds', sep=""), refhook = NULL)
   
