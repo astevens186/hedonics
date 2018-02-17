@@ -15,7 +15,7 @@ pkgTest <- function(x) {
 }
 
 ## These lines load the required packages
-packages <- c("readxl","Hmisc","rdd","Matrix","psych","xtable","splines","ck37r","data.table","matrixStats","tmle","xgboost", "MatchIt","gtools","statar","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
+packages <- c("readxl","Hmisc","quantreg","rdd","Matrix","psych","xtable","splines","ck37r","data.table","matrixStats","tmle","xgboost", "MatchIt","gtools","statar","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
 lapply(packages, pkgTest)
 
 #library(statar)
@@ -72,7 +72,7 @@ xgboost$names
 
 xgboost.tune2 <- list(ntrees = c(50),
                       max_depth = c(5,15),
-                      shrinkage = c( 0.01,0.1),
+                      shrinkage = c( 0.1),
                       minobspernode = c(10))
 
 # Set detailed names = T so we can see the configuration for each function.
@@ -157,40 +157,40 @@ expandingList <- function(capacity = 10) {
 }
 
 if(FALSE){
-SL.gam <- function(Y, X, newX, family, obsWeights, deg.gam =2 , cts.num=4 , ...) {
-  .SL.require('gam')
-  if("mgcv" %in% loadedNamespaces()) warning("mgcv and gam packages are both in use. You might see an error because both packages use the same function names.")
-  # create the formula for gam with a spline for each continuous variable
-  cts.x <- apply(X, 2, function(x) (length(unique(x)) > cts.num))
-  if (sum(!cts.x) > 0) { 
-    gam.model <- as.formula(paste("Y~", paste(paste("s(", colnames(X[, cts.x, drop = FALSE]), ",", deg.gam,")", sep=""), collapse = "+"), "+", paste(colnames(X[, !cts.x, drop=FALSE]), collapse = "+")))
-  } else {
-    gam.model <- as.formula(paste("Y~", paste(paste("s(", colnames(X[, cts.x, drop = FALSE]), ",", deg.gam, ")", sep=""), collapse = "+")))
+  SL.gam <- function(Y, X, newX, family, obsWeights, deg.gam =2 , cts.num=4 , ...) {
+    .SL.require('gam')
+    if("mgcv" %in% loadedNamespaces()) warning("mgcv and gam packages are both in use. You might see an error because both packages use the same function names.")
+    # create the formula for gam with a spline for each continuous variable
+    cts.x <- apply(X, 2, function(x) (length(unique(x)) > cts.num))
+    if (sum(!cts.x) > 0) { 
+      gam.model <- as.formula(paste("Y~", paste(paste("s(", colnames(X[, cts.x, drop = FALSE]), ",", deg.gam,")", sep=""), collapse = "+"), "+", paste(colnames(X[, !cts.x, drop=FALSE]), collapse = "+")))
+    } else {
+      gam.model <- as.formula(paste("Y~", paste(paste("s(", colnames(X[, cts.x, drop = FALSE]), ",", deg.gam, ")", sep=""), collapse = "+")))
+    }
+    # fix for when all variables are binomial
+    if (sum(!cts.x) == length(cts.x)) {
+      gam.model <- as.formula(paste("Y~", paste(colnames(X), collapse = "+"), sep = ""))
+    }
+    fit.gam <- gam::gam(gam.model, data = X, family = family, control = gam::gam.control(maxit = 50, bf.maxit = 50), weights = obsWeights)
+    pred <- gam::predict.gam(fit.gam, newdata = newX, type = "response")
+    fit <- list(object = fit.gam)
+    out <- list(pred = pred, fit = fit)
+    class(out$fit) <- c("SL.gam")
+    return(out)
   }
-  # fix for when all variables are binomial
-  if (sum(!cts.x) == length(cts.x)) {
-    gam.model <- as.formula(paste("Y~", paste(colnames(X), collapse = "+"), sep = ""))
+  
+  predict.SL.gam <- function(object, newdata, ...){
+    .SL.require('gam')
+    pred <- gam::predict.gam(object = object$object, newdata = newdata, type = "response")
+    return(pred)
   }
-  fit.gam <- gam::gam(gam.model, data = X, family = family, control = gam::gam.control(maxit = 50, bf.maxit = 50), weights = obsWeights)
-  pred <- gam::predict.gam(fit.gam, newdata = newX, type = "response")
-  fit <- list(object = fit.gam)
-  out <- list(pred = pred, fit = fit)
-  class(out$fit) <- c("SL.gam")
-  return(out)
-}
-
-predict.SL.gam <- function(object, newdata, ...){
-  .SL.require('gam')
-  pred <- gam::predict.gam(object = object$object, newdata = newdata, type = "response")
-  return(pred)
-}
-
-.SL.require <- function(package, message = paste('loading required package (', package, ') failed', sep = '')) {
-  if(!require(package, character.only = TRUE)) {
-    stop(message, call. = FALSE)
+  
+  .SL.require <- function(package, message = paste('loading required package (', package, ') failed', sep = '')) {
+    if(!require(package, character.only = TRUE)) {
+      stop(message, call. = FALSE)
+    }
+    invisible(TRUE)
   }
-  invisible(TRUE)
-}
 }
 
 SL.library<-expandingList()
@@ -201,7 +201,7 @@ SL.library2<-expandingList()
 PS.library2<-expandingList()
 SL.library2$add("SL.mean")
 PS.library2$add("SL.mean")
-SL.library2$add(randomForest$names)
+#SL.library2$add(randomForest$names)
 #SL.library2$add("SL.nnls")
 #SL.library$add("SL.gam")
 SL.library$add("SL.randomForest")
@@ -225,7 +225,7 @@ for(i in 1:length(glmnet2$names)){
 #  SL.library$add(gam$names[i])
 #}
 #for(i in 1:length(gam$names)){
- # SL.library2$add(gam$names[i])
+# SL.library2$add(gam$names[i])
 #}
 
 for(i in 1:length(xgboost$names)){
@@ -298,14 +298,12 @@ saveRDS(sample.1, file = paste(path,'repeat5wells.rds', sep=""), ascii = FALSE, 
         compress = TRUE, refhook = NULL)
 
 ####################################################################
-
 #sample.1<-readRDS(paste(path,'repeat5wells.rds', sep=""), refhook = NULL)
+dNPL$row<-seq(1:dim(dNPL)[1])
+psitel<-dNPL[dNPL$rsitinc_desc=="LANDFILL","row"]
+
 psitel<-c(2,4,11,12,15,16,19,20,21)
 psitel<-c(2,12,15,16)
-
-psitel<-c(2,15,16)
-
-#psite<-2
 for(psite in psitel){
   data<-readRDS(paste(path,'fulldeletionbajgw',psite,'.rds', sep=""), refhook = NULL)
   
@@ -323,500 +321,479 @@ for(psite in psitel){
   for(i in 1:quants){
     #i<-1
     d.sample.data<-sample.data[indx==i,]
-  
-  rep.row<-function(x,n){
-    matrix(rep(x,each=n),nrow=n)
-  }
-  D<-rep.row(as.numeric(d.sample.data$HHID),nrow(d.sample.data))
-  D<-t(D)-D
-  D[D>0]<-2
-  D[D<0]<-2
-  D[D==0]<-1
-  D[D==2]<-0
-  sameHouse<-D
-  
-  D<-rep.row(as.numeric(d.sample.data$TransId),nrow(d.sample.data))
- 
-  D<-t(D)-D
-  D[D>0]<-2
-  D[D<0]<-2
-  D[D==0]<-1
-  D[D==2]<-0
-  sameSale<-D
-  
-  otherSales<-sameHouse-sameSale
-  rm(sameHouse,sameSale)
-  gc()
-  D<-rep.row(d.sample.data$date,nrow(d.sample.data))
-  D<-t(D)-D
-  D[D<0]<-0
-  diffDates<-D
-  rm(D)
-  gc()
-  
-  library(matrixStats)
-  dumDiffDates<-diffDates*otherSales
-  dumDiffDates[dumDiffDates==0]<- 10000000000000000
-  #dumDiffDates[dumDiffDates-rowMins(dumDiffDates)>0]<- -1
-  dumDiffDates[dumDiffDates-rowMins(dumDiffDates,na.rm = TRUE)==0]<-1
-  dumDiffDates[dumDiffDates<0]<-0
-  dumDiffDates[dumDiffDates>1]<-0
-  dumDiffDates[dumDiffDates==10000000000000000]<-0
-  dumDiffDates[rowSums(dumDiffDates)-dim(dumDiffDates)[1]==0]<-0
-  rm(diffDates,otherSales)
-  gc()
-  
-  
-  d.sample.data$preprice<-dumDiffDates%*%d.sample.data$price
-  d.sample.data$prelogprice<-dumDiffDates%*%d.sample.data$logprice
-  
-  d.sample.data$predate<-dumDiffDates%*%as.numeric(d.sample.data$date)
-  d.sample.data$prediffdate<-as.numeric(d.sample.data$date)-d.sample.data$predate
-  d.sample.data$presstatusd<-ifelse(d.sample.data$predate-as.numeric(odNPL$date[i])>0,1,0)
-  d.sample.data$presstatuscc<-ifelse(d.sample.data$predate-as.numeric(odNPL$ControlsComplete[i])>0,1,0)
-  
-  
-  d.sample.data<-d.sample.data[d.sample.data$predate>0,]
-  #sample1<-sample1[sample1$presstatus<1 ,]
-  #sample1<-sample1[sample1$treatdgw<1 ,]
-  
-  
-  d.sample.data$difflogprice<-d.sample.data$logprice-d.sample.data$prelogprice
-  
-  sample<-rbind(sample,d.sample.data)
+    
+    rep.row<-function(x,n){
+      matrix(rep(x,each=n),nrow=n)
+    }
+    D<-rep.row(as.numeric(d.sample.data$HHID),nrow(d.sample.data))
+    D<-t(D)-D
+    D[D>0]<-2
+    D[D<0]<-2
+    D[D==0]<-1
+    D[D==2]<-0
+    sameHouse<-D
+    
+    D<-rep.row(as.numeric(d.sample.data$TransId),nrow(d.sample.data))
+    
+    D<-t(D)-D
+    D[D>0]<-2
+    D[D<0]<-2
+    D[D==0]<-1
+    D[D==2]<-0
+    sameSale<-D
+    
+    otherSales<-sameHouse-sameSale
+    rm(sameHouse,sameSale)
+    gc()
+    D<-rep.row(d.sample.data$date,nrow(d.sample.data))
+    D<-t(D)-D
+    D[D<0]<-0
+    diffDates<-D
+    rm(D)
+    gc()
+    
+    library(matrixStats)
+    dumDiffDates<-diffDates*otherSales
+    dumDiffDates[dumDiffDates==0]<- 10000000000000000
+    #dumDiffDates[dumDiffDates-rowMins(dumDiffDates)>0]<- -1
+    dumDiffDates[dumDiffDates-rowMins(dumDiffDates,na.rm = TRUE)==0]<-1
+    dumDiffDates[dumDiffDates<0]<-0
+    dumDiffDates[dumDiffDates>1]<-0
+    dumDiffDates[dumDiffDates==10000000000000000]<-0
+    dumDiffDates[rowSums(dumDiffDates)-dim(dumDiffDates)[1]==0]<-0
+    rm(diffDates,otherSales)
+    gc()
+    
+    
+    d.sample.data$preprice<-dumDiffDates%*%d.sample.data$price
+    d.sample.data$prelogprice<-dumDiffDates%*%d.sample.data$logprice
+    
+    d.sample.data$predate<-dumDiffDates%*%as.numeric(d.sample.data$date)
+    d.sample.data$prediffdate<-as.numeric(d.sample.data$date)-d.sample.data$predate
+    d.sample.data$presstatusd<-ifelse(d.sample.data$predate-as.numeric(odNPL$date[i])>0,1,0)
+    d.sample.data$presstatuscc<-ifelse(d.sample.data$predate-as.numeric(odNPL$ControlsComplete[i])>0,1,0)
+    
+    
+    d.sample.data<-d.sample.data[d.sample.data$predate>0,]
+    #sample1<-sample1[sample1$presstatus<1 ,]
+    #sample1<-sample1[sample1$treatdgw<1 ,]
+    
+    
+    d.sample.data$difflogprice<-d.sample.data$logprice-d.sample.data$prelogprice
+    
+    sample<-rbind(sample,d.sample.data)
   }
   library(data.table)
+  sample<-sample[,c("TransId","preprice","prelogprice","predate","prediffdate","presstatusd","presstatuscc","difflogprice")]
   data.dt<-data.table(data)
   sample.dt<-data.table(sample)
   sample.new<-merge(data.dt,sample.dt,all.x=TRUE,by="TransId")
   
   saveRDS(sample.new, file = paste(path,'fullbaj',psite,'.rds', sep=""), ascii = FALSE, version = NULL,
           compress = TRUE, refhook = NULL)
- }
+}
 
-for(psite in psitel){
-  samplefull<-readRDS(paste(path,'fulldeletionbajgw',psite,'.rds', sep=""), refhook = NULL)
+psitel<-c(2,15,16)
+psitel<-c(2,11,12,15,16,19,20,21)
+
+
+dNPL$row<-seq(1:dim(dNPL)[1])
+psitel<-dNPL[dNPL$rsitinc_desc=="LANDFILL","row"]
+
+psite<-psitel[1]
+samplefull<-readRDS(paste(path,'fullbaj',psite,'.rds', sep=""), refhook = NULL)
+samplefull<-samplefull[predate>0,]
+samplefull$treatst<-samplefull[[paste0('treatdgw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
+buf<-1
+samplefull$buffer<-ifelse(samplefull$date-odNPL$date[psite]-(buf*365)<0&samplefull$date-odNPL$date[psite]>0,1,0)
+
+samplefull<-samplefull[buffer<1,]
+for(psite in psitel[2:length(psitel)]){
+  sample2<-readRDS(paste(path,'fullbaj',psite,'.rds', sep=""), refhook = NULL)
+  sample2<-sample2[predate>0,]
+  sample2$treatst<-sample2[[paste0('treatdgw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
+  buf<-1
+  sample2$buffer<-ifelse(sample2$date-odNPL$date[psite]-(buf*365)<0&sample2$date-odNPL$date[psite]>0,1,0)
   
-  sample<-samplefull
-  sample$treatd0gw<-sample$treatdgw
-  #dist<-c('10k','8k','6k','5k','4k','3k','2k')#,'1k','500m')
-  dist<-c('10k','8k','6k','4k','2k')#,'1k','500m')
-  #dist<-c('4k','2k')#,'1k','500m')
-  
-  laglead<-c("")
-  treatl<-c('TATE','MUATE','WLATE')
-  #di<-5
-  #ll<-1
-  
-  for(buf in 1:2){
-    #buf<-2
-    sample$buffer<-ifelse(sample$date-odNPL$date[psite]-(buf*365)<0&sample$date-odNPL$date[psite]>0,1,0)
-    
-    sample<-sample[buffer<1,]
-    
-    
-    
-    #matrices
-    for(i in c("lm","tmle")){
-      for(j in c("t","wl","mu")){
-        for(k in c("did","es")){
-          assign(paste0('betas.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(treatl)))
-          assign(paste0('ses.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(treatl)))
-          assign(paste0('ps.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(treatl)))
-          
-          assign(paste0('cc.betas.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(treatl)))
-          assign(paste0('cc.ses.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(treatl)))
-          assign(paste0('cc.ps.',i,'.',j,'.',k),matrix(nrow = length(dist),ncol=length(treatl)))
-          
-        }
-      }
-    }
-    
-    for(treat in  1:length(treatl)){
-      treatc<-treatl[[treat]]
-      #for(ll in 1:length(laglead)){
-      for(di in 1:length(dist)){
-        dic<-dist[[di]]
-        ll<-1
-        llc<-laglead[[ll]]
-        sample<-samplefull[samplefull[[paste0('dist',dic)]]>0,]
+  sample2<-sample2[buffer<1,]
+  samplefull<-rbind(samplefull,sample2)
+}
+
+#psite<-2
+
+samplefull$treatd0gw<-samplefull$treatdgw
+#sample$date<-sample$date.x
+
+#dist<-c('10k','8k','6k','5k','4k','3k','2k')#,'1k','500m')
+dist<-c('10k','8k','6k','4k','2k')#,'1k','500m')
+#dist<-c('4k','2k')#,'1k','500m')
+
+laglead<-c("")
+treatl<-c('TATE','MUATE','WLATE')
+#di<-5
+#ll<-1
+
+#for(buf in 1:2){
+
+
+quant<-10
+
+#matrices
+
+for(i in c("lm","tmle")){
+  for(j in c("t","wl","mu")){
+    for(k in c("did","es")){
+      for(treat in treatl){
+        assign(paste0('betas.',i,'.',j,'.',k,'.',treat),matrix(ncol = length(dist),nrow=quant))
+        assign(paste0('ses.',i,'.',j,'.',k,'.',treat),matrix(ncol = length(dist),nrow=quant))
+        assign(paste0('ps.',i,'.',j,'.',k,'.',treat),matrix(ncol = length(dist),nrow=quant))
         
-        if(treatc=='TATE'){
-          #Total Average Treatment Effect
-          timefe<-select(sample, starts_with('timefe'))
-          treatgroupm<-select(sample, starts_with('treatmentgroup'))
-          year<-select(sample, starts_with('year'))
-          bin<-select(sample, starts_with('bin'))
-          sample$demlogprice<-demeanlist(sample$logprice,
-                                         list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
-          sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
-          
-          #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
-          #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
-          sample$treatControlsComplete<-sample[[paste0('treatControlsComplete',psite)]]
-          sample$timefed<-sample[[paste0('timefed',psite)]]
-          sample$timefedControlsComplete<-sample[[paste0('timefedControlsComplete',psite)]]
-          sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
-          sample$treatexCC<-ifelse(sample$treatControlsComplete==1 &sample$treatst==0,1,0)
-        }
-        if(treatc=='MUATE'){
-          #Municipal ATE
-          sample$treatdgwMU<- sample[[paste0('treatd',llc,'gw',psite)]]* sample$WaterStndCode.fMU
-          sample$treatgroupMU<-sample$treatmentgroup * sample$WaterStndCode.fMU
-          sample$controlMU<-sample$control*sample$WaterStndCode.fMU
-          
-          sample$sample.MUATE<-sample$control+sample$treatgroupMU
-          
-          sample<-subset(sample, sample.MUATE==1)
-          timefe<-select(sample, starts_with('timefe'))
-          treatgroupm<-select(sample, starts_with('treatmentgroup'))
-          year<-select(sample, starts_with('year'))
-          bin<-select(sample, starts_with('bin'))
-          sample$demlogprice<-demeanlist(sample$logprice,
-                                         list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
-          sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
-          
-          #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
-          #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
-          sample$treatControlsComplete<-sample[[paste0('treatControlsComplete',psite)]]
-          sample$timefed<-sample[[paste0('timefed',psite)]]
-          sample$timefedControlsComplete<-sample[[paste0('timefedControlsComplete',psite)]]
-          sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
-          sample$treatexCC<-ifelse(sample$treatControlsComplete==1 &sample$treatst==0,1,0)
-        }
-        if(treatc=='WLATE'){
-          #Municipal ATE
-          sample$treatdgwWL<- sample[[paste0('treatd',llc,'gw',psite)]]* sample$WaterStndCode.fWL
-          sample$treatgroupWL<-sample$treatmentgroup * sample$WaterStndCode.fWL
-          sample$controlWL<-sample$control*sample$WaterStndCode.fWL
-          
-          sample$sample.WLATE<-sample$control+sample$treatgroupWL
-          
-          sample<-subset(sample, sample.WLATE==1)
-          timefe<-select(sample, starts_with('timefe'))
-          treatgroupm<-select(sample, starts_with('treatmentgroup'))
-          year<-select(sample, starts_with('year'))
-          bin<-select(sample, starts_with('bin'))
-          sample$demlogprice<-demeanlist(sample$logprice,
-                                         list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
-          sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
-          
-          #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
-          #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
-          sample$treatControlsComplete<-sample[[paste0('treatControlsComplete',psite)]]
-          sample$timefed<-sample[[paste0('timefed',psite)]]
-          sample$timefedControlsComplete<-sample[[paste0('timefedControlsComplete',psite)]]
-          sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
-          sample$treatexCC<-ifelse(sample$treatControlsComplete==1 &sample$treatst==0,1,0)
-        }
-        
-        if(mean(sample$treatst)>0){
-          
-          #TATE<-as.formula(logprice ~ treatdgw+ treatmentgroup+data.matrix(treatgroupm)+ data.matrix(timefe)+ data.matrix(year[,3:25])+ as.factor(HHID))
-          
-          sdf<-5
-          lat<-sample$PropertyAddressLatitude
-          long<-sample$PropertyAddressLongitude
-          splat<-bs(lat, df = sdf)
-          splong<-bs(long, df = sdf)
-          spint<-model.matrix(~splat:splong)
-          
-          spTATE<-cbind(splat,splong,spint,lat,long)
-          
-          
-          xTATE<-model.matrix(~ LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                                sqfeet+day+
-                                data.matrix(year[,4:25])
-                                -1,sample)
-          xcTATE<-model.matrix(~(data.matrix(bin)+
-                                   poly(LotSizeSquareFeet,4) + poly(YearBuilt,4) +   
-                                   poly(sqfeet,4))^3-1,sample)
-          
-          X<-model.matrix(~ treatst+treatexCC+treatmentgroup+
-                            LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                            sqfeet+ 
-                            data.matrix(year[,3:25]),sample)
-          
-          qr.X <- qr(X, tol=1e-3, LAPACK = FALSE)
-          (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
-          (keep <- qr.X$pivot[seq_len(rnkX)])
-          ## 1 2 4 5 
-          X <- X[,keep]
-          
-          results.lm.t.did<-felm(logprice ~X|as.factor(PropertyAddressCensusTractAndBlock),sample)
-          #summary(results.lm.t.did)
-          nocc<-0
-          notg<-0
-          if(is.na(results.lm.t.did$coefficients["Xtreatst",])){
-            X<-model.matrix(~ treatst+treatmentgroup+timefedControlsComplete+timefed +
-                              LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                              sqfeet+ 
-                              data.matrix(year[,3:25]),sample)
-            
-            qr.X <- qr(X, tol=1e-3, LAPACK = FALSE)
-            (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
-            (keep <- qr.X$pivot[seq_len(rnkX)])
-            ## 1 2 4 5 
-            X <- X[,keep]
-            
-            results.lm.t.did<-felm(logprice ~X|as.factor(PropertyAddressCensusTractAndBlock),sample)
-            #summary(results.lm.t.did)
-            nocc<-1
-            notg<-0
-          }
-          if(is.na(results.lm.t.did$coefficients["Xtreatst",])){
-            X<-model.matrix(~ treatst+timefed +
-                              LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                              sqfeet+ 
-                              data.matrix(year[,3:25]),sample)
-            
-            qr.X <- qr(X, tol=1e-3, LAPACK = FALSE)
-            (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
-            (keep <- qr.X$pivot[seq_len(rnkX)])
-            ## 1 2 4 5 
-            X <- X[,keep]
-            
-            results.lm.t.did<-felm(logprice ~X|as.factor(PropertyAddressCensusTractAndBlock),sample)
-            #summary(results.lm.t.did)
-            nocc<-1
-            notg<-1
-          }
-          
-          tsample<-sample[control==0,]
-          if(dim(data.matrix(tsample))[1]>40){
-            year<-select(tsample, starts_with('year'))
-            
-            X<-model.matrix(~ treatst+treatexCC+timefedControlsComplete+timefed +
-                              LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                              sqfeet+ 
-                              data.matrix(year[,3:25]) ,tsample)
-            qr.X <- qr(X, tol=1e-3, LAPACK = FALSE)
-            (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
-            (keep <- qr.X$pivot[seq_len(rnkX)])
-            ## 1 2 4 5 
-            X <- X[,keep]
-            
-            results.lm.t.es<-felm(logprice ~X|as.factor(PropertyAddressCensusTractAndBlock),tsample)
-            #summary(results.lm.t.es)
-            
-            if(is.na(results.lm.t.es$coefficients["Xtreatst",])){
-              X<-model.matrix(~ treatst+timefed +
-                                LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                                sqfeet+ 
-                                data.matrix(year[,3:25]) ,tsample)
-              qr.X <- qr(X, tol=1e-3, LAPACK = FALSE)
-              (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
-              (keep <- qr.X$pivot[seq_len(rnkX)])
-              ## 1 2 4 5 
-              X <- X[,keep]
-              
-              results.lm.t.es<-felm(logprice ~X|as.factor(PropertyAddressCensusTractAndBlock),tsample)
-              #summary(results.lm.t.es)
-            }
-          }
-          
-          #assign(paste0('lm.TATE.',k,i),lm.TATE)
-          summary(results.lm.t.did)
-          summary(results.lm.t.es)
-          
-          
-          sdf<-5
-          lat<-sample$PropertyAddressLatitude
-          long<-sample$PropertyAddressLongitude
-          splat<-bs(lat, df = sdf)
-          splong<-bs(long, df = sdf)
-          spint<-model.matrix(~splat:splong)
-          
-          xcTATE<-cbind(splat,splong,spint,lat,long,poly(sample$day,5),bs(sample$day, df = 10))
-          year<-select(sample, starts_with('year'))
-          if(nocc==0&notg==0){
-            feTATE<-model.matrix(~ treatmentgroup+timefedControlsComplete+timefed +#timefed +
-                                   treatexCC,sample)#+#timefedControlsComplete+timefed +
-            #aftfinalnpl+timefinalnplfe+
-            #data.matrix(exdum)+
-            #data.matrix(year[,25]),sample)
-            feTATE<-as.matrix(feTATE[,SD(feTATE)>0])
-            feTATE<-as.matrix(feTATE[,!duplicated(cor(feTATE))])
-            qr.X <- qr(feTATE, tol=1e-3, LAPACK = FALSE)
-            (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
-            (keep <- qr.X$pivot[seq_len(rnkX)])
-            ## 1 2 4 5 
-            feTATE <- feTATE[,keep]
-          }
-          if(nocc==1&notg==0){
-            feTATE<-model.matrix(~ treatmentgroup+timefed -1,sample)#+#timefed +
-            #timefedControlsComplete+
-            #aftfinalnpl+timefinalnplfe+
-            #data.matrix(exdum)+
-            #data.matrix(year[,25]),sample)
-            feTATE<-as.matrix(feTATE[,SD(feTATE)>0])
-            feTATE<-as.matrix(feTATE[,!duplicated(cor(feTATE))])
-            qr.X <- qr(feTATE, tol=1e-3, LAPACK = FALSE)
-            (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
-            (keep <- qr.X$pivot[seq_len(rnkX)])
-            ## 1 2 4 5 
-            feTATE <- feTATE[,keep]
-          }
-          if(nocc==1&notg==1){
-            feTATE<-model.matrix(~timefed +#treatmentgroup+#timefed +
-                                 #treatexCC+#timefedControlsComplete+
-                                 #aftfinalnpl+timefinalnplfe+
-                                 #data.matrix(exdum)+
-                                 data.matrix(year[,25]),sample)
-            feTATE<-as.matrix(feTATE[,SD(feTATE)>0])
-            feTATE<-as.matrix(feTATE[,!duplicated(cor(feTATE))])
-            qr.X <- qr(feTATE, tol=1e-3, LAPACK = FALSE)
-            (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
-            (keep <- qr.X$pivot[seq_len(rnkX)])
-            ## 1 2 4 5 
-            feTATE <- feTATE[,keep]
-          }
-          
-          W<-cbind(xcTATE,xTATE,feTATE)
-          A<-sample$treatst
-          V<-feTATE
-          Time<-sample$day
-          
-          results.tmle.t.did <- tmleMSM(Y = sample$demlogprice, A = A, W = W, V = V, T= Time,
-                                        MSM = "A + V",family="gaussian", 
-                                        Q.SL.library = SL.library2$as.list(),
-                                        g.SL.library = PS.library2$as.list(),
-                                        #Qform = Y ~ A+V+W,
-                                        #gform = A~1,
-                                        #hAVform = A~ 1,
-                                        ub = 20,
-                                        V_SL =5,
-                                        alpha = 0.90,
-                                        inference = TRUE,
-                                        verbose=TRUE)
-          print(results.tmle.t.did)
-          
-          
-          
-          sdf<-5
-          lat<-sample$PropertyAddressLatitude
-          long<-sample$PropertyAddressLongitude
-          splat<-bs(lat, df = sdf)
-          splong<-bs(long, df = sdf)
-          spint<-model.matrix(~splat:splong)
-          
-          xcTATE<-cbind(splat,splong,spint,lat,long,poly(sample$day,5),bs(sample$day, df = 10))
-          feTATEes<-model.matrix(~ treatexCC+#aftfinalnpl+
-                                   #as.matrix(exdum)
-                                   -1,tsample)
-          feTATEes<-as.matrix(feTATEes[,SD(feTATEes)>0])
-          if(dim(feTATEes)[2]>1){
-            feTATEes<-feTATEes[,!duplicated(cor(feTATEes))]
-          }
-          qr.X <- qr(feTATEes, tol=1e-3, LAPACK = FALSE)
-          (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
-          (keep <- qr.X$pivot[seq_len(rnkX)])
-          ## 1 2 4 5 
-          feTATEes <- feTATEes[,keep]
-          if(nocc==0&dim(as.matrix(feTATEes))[2]>0){
-            if(dim(data.matrix(tsample))[1]>40){
-              W<-cbind(xcTATE[sample$control==0,],xTATE[sample$control==0,],feTATEes)
-              
-              A<-sample[control==0,treatst]
-              V<-feTATEes
-              Time<-sample[control==0,day]
-              
-              results.tmle.t.es <- tmleMSM(Y = tsample$demlogprice, A = A, W = W, V = V, #T= Time,
-                                           MSM = "A + V",family="gaussian", 
-                                           Q.SL.library = SL.library2$as.list(),
-                                           g.SL.library = PS.library2$as.list(),
-                                           #Qform = Y ~ A+V+W,
-                                           #gform = A~1,
-                                           #hAVform = A~ 1,
-                                           ub = 20,
-                                           V_SL =5,
-                                           alpha = 0.90,
-                                           inference = TRUE,
-                                           verbose=TRUE)
-              print(results.tmle.t.es)
-              
-              betas.tmle.t.es[di,treat]<-results.tmle.t.es$psi["A"]
-              ses.tmle.t.es[di,treat]<-results.tmle.t.es$se["A"]
-              ps.tmle.t.es[di,treat]<-results.tmle.t.es$pvalue["A"]
-              
-              cc.betas.tmle.t.es[di,treat]<-results.tmle.t.es$psi["V"]
-              cc.ses.tmle.t.es[di,treat]<-results.tmle.t.es$se["V"]
-              cc.ps.tmle.t.es[di,treat]<-results.tmle.t.es$pvalue["V"]
-              
-              
-            }}
-          
-          
-          
-          betas.tmle.t.did[di,treat]<-results.tmle.t.did$psi["A"]
-          ses.tmle.t.did[di,treat]<-results.tmle.t.did$se["A"]
-          ps.tmle.t.did[di,treat]<-results.tmle.t.did$pvalue["A"]
-          
-          if(nocc==0 &notg==0){
-            cc.betas.tmle.t.did[di,treat]<-results.tmle.t.did$psi["VtreatexCC"]
-            cc.ses.tmle.t.did[di,treat]<-results.tmle.t.did$se["VtreatexCC"]
-            cc.ps.tmle.t.did[di,treat]<-results.tmle.t.did$pvalue["VtreatexCC"]
-          }
-          
-          betas.lm.t.did[di,treat]<-as.numeric(coef(summary(results.lm.t.did))[,"Estimate"][2])
-          betas.lm.t.es[di,treat]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][2])
-          ses.lm.t.did[di,treat]<-as.numeric(coef(summary(results.lm.t.did))[,"Std. Error"][2])
-          ses.lm.t.es[di,treat]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][2])
-          ps.lm.t.did[di,treat]<-as.numeric(coef(summary(results.lm.t.did))[,"Pr(>|t|)"][2])
-          ps.lm.t.es[di,treat]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][2])
-          
-          cc.betas.lm.t.did[di,treat]<-as.numeric(coef(summary(results.lm.t.did))[,"Estimate"][3])
-          cc.betas.lm.t.es[di,treat]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][3])
-          cc.ses.lm.t.did[di,treat]<-as.numeric(coef(summary(results.lm.t.did))[,"Std. Error"][3])
-          cc.ses.lm.t.es[di,treat]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][3])
-          cc.ps.lm.t.did[di,treat]<-as.numeric(coef(summary(results.lm.t.did))[,"Pr(>|t|)"][3])
-          cc.ps.lm.t.es[di,treat]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][3])
-          
-          print(paste0('distance = ',dic))
-          print(paste0('treat = ',treatc))
-          print(paste0('site = ',psite))
-        }
-      }
-    }
-    for(statchange in c('','cc.')){
-      for(meth in c('lm','tmle')){
-        for(inf in c('did','es')){
-          #meth<-'tmle'
-          p<-get(paste0(statchange,'ps.',meth,'.t.',inf))
-          mystars <- ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "* ", ifelse(p < .1, "^\\bullet  ", " "))))
-          
-          pb<-exp(get(paste0(statchange,'betas.',meth,'.t.',inf)))-1
-          rpb<-round(pb,3)
-          se<-round(exp(get(paste0(statchange,'ses.',meth,'.t.',inf)))-1,3)
-          
-          srpb <- matrix(paste(rpb, mystars, sep=""), ncol=dim(pb)[2] )
-          nsrpb<-rbind(c("",laglead),cbind(dist,srpb))
-          
-          #colnames(srpb)<-laglead
-          #rownames(srpb)<-dist
-          
-          results.mat<-matrix(nrow= 2*dim(srpb)[1],ncol= dim(srpb)[2])
-          
-          for(i in 1:dim(results.mat)[1]){
-            if(i %% 2 != 0){
-              results.mat[i,]<-srpb[ceiling(i/2),]
-              #    rownames(ols.mat)[i]<-rownames(srpb)[ceiling(i/2)]
-            }
-            if(i %% 2 == 0){
-              results.mat[i,]<-paste0('(',se[ceiling(i/2),],')')
-            }
-          }
-          
-          #results.mat<-cbind(c('10k','','8k','','6k','','4k','','2k',''),results.mat)
-          #results.mat<-rbind(c('',laglead),results.mat)
-          xtable(results.mat)
-          print.xtable(xtable(results.mat),include.rownames=FALSE, 
-                       include.colnames=FALSE, sanitize.text.function = identity,
-                       type="latex", file=paste0(path,meth,inf,psite,statchange,"buffer",buf,".tex"))
-        }
       }
     }
   }
+}
+
+for(treat in  1:length(treatl)){
+  # di<-3
+  #treat<-1
+  treatc<-treatl[[treat]]
+  #for(ll in 1:length(laglead)){
+  for(di in 1:length(dist)){
+    dic<-dist[[di]]
+    ll<-1
+    llc<-laglead[[ll]]
+    sample<-samplefull[samplefull[[paste0('dist',dic)]]>0,]
+    #sample$treatst<-sample$treatst-sample$presstatusd
+    #sample<-sample[treatst>0,]
+    # sample$logprice<-sample$logprice.x
+    if(treatc=='TATE'){
+      #Total Average Treatment Effect
+      timefe<-select(sample, starts_with('timefe'))
+      treatgroupm<-select(sample, starts_with('treatmentgroup'))
+      year<-select(sample, starts_with('year'))
+      bin<-select(sample, starts_with('bin'))
+      sample$demlogprice<-demeanlist(sample$logprice,
+                                     list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
+      sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
+      
+      #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
+      #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
+      sample$treatControlsComplete<-sample[[paste0('treatControlsComplete',psite)]]
+      sample$timefed<-sample[[paste0('timefed',psite)]]
+      sample$timefedControlsComplete<-sample[[paste0('timefedControlsComplete',psite)]]
+      sample$treatexCC<-ifelse(sample$treatControlsComplete==1 &sample$treatst==0,1,0)
+    }
+    if(treatc=='MUATE'){
+      #Municipal ATE
+      sample$treatdgwMU<- sample[[paste0('treatd',llc,'gw',psite)]]* sample$WaterStndCode.fMU
+      sample$treatgroupMU<-sample$treatmentgroup * sample$WaterStndCode.fMU
+      sample$controlMU<-sample$control*sample$WaterStndCode.fMU
+      
+      sample$sample.MUATE<-sample$control+sample$treatgroupMU
+      
+      sample<-subset(sample, sample.MUATE==1)
+      timefe<-select(sample, starts_with('timefe'))
+      treatgroupm<-select(sample, starts_with('treatmentgroup'))
+      year<-select(sample, starts_with('year'))
+      bin<-select(sample, starts_with('bin'))
+      sample$demlogprice<-demeanlist(sample$logprice,
+                                     list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
+      sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
+      
+      #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
+      #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
+      sample$treatControlsComplete<-sample[[paste0('treatControlsComplete',psite)]]
+      sample$timefed<-sample[[paste0('timefed',psite)]]
+      sample$timefedControlsComplete<-sample[[paste0('timefedControlsComplete',psite)]]
+      #sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
+      sample$treatexCC<-ifelse(sample$treatControlsComplete==1 &sample$treatst==0,1,0)
+    }
+    if(treatc=='WLATE'){
+      #Municipal ATE
+      sample$treatdgwWL<- sample[[paste0('treatd',llc,'gw',psite)]]* sample$WaterStndCode.fWL
+      sample$treatgroupWL<-sample$treatmentgroup * sample$WaterStndCode.fWL
+      sample$controlWL<-sample$control*sample$WaterStndCode.fWL
+      
+      sample$sample.WLATE<-sample$control+sample$treatgroupWL
+      
+      sample<-subset(sample, sample.WLATE==1)
+      timefe<-select(sample, starts_with('timefe'))
+      treatgroupm<-select(sample, starts_with('treatmentgroup'))
+      year<-select(sample, starts_with('year'))
+      bin<-select(sample, starts_with('bin'))
+      sample$demlogprice<-demeanlist(sample$logprice,
+                                     list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
+      sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
+      
+      #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
+      #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
+      sample$treatControlsComplete<-sample[[paste0('treatControlsComplete',psite)]]
+      sample$timefed<-sample[[paste0('timefed',psite)]]
+      sample$timefedControlsComplete<-sample[[paste0('timefedControlsComplete',psite)]]
+      #sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
+      sample$treatexCC<-ifelse(sample$treatControlsComplete==1 &sample$treatst==0,1,0)
+    }
+    
+    if(mean(sample$treatst)>0){
+      
+      #TATE<-as.formula(logprice ~ treatdgw+ treatmentgroup+data.matrix(treatgroupm)+ data.matrix(timefe)+ data.matrix(year[,3:25])+ as.factor(HHID))
+      
+      sdf<-15
+      lat<-sample$PropertyAddressLatitude
+      long<-sample$PropertyAddressLongitude
+      splat<-bs(lat, df = sdf)
+      splong<-bs(long, df = sdf)
+      spint<-model.matrix(~splat:splong)
+      
+      spTATE<-cbind(splat,splong,spint,lat,long)
+      
+      
+      xTATE<-model.matrix(~ LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
+                            sqfeet+day+prediffdate+predate+prelogprice+
+                            data.matrix(year[,4:25])
+                          -1,sample)
+      xcTATE<-model.matrix(~(data.matrix(bin)+
+                               poly(LotSizeSquareFeet,4) + poly(YearBuilt,4) +   
+                               poly(sqfeet,4))^3-1,sample)
+      
+      sample$tprelprice<-sample$prelogprice*ifelse(sample$treatst==1 & sample$presstatusd==0,1,0)
+      indx<- factor(as.numeric(cut2(sample$preprice, g=quant)))
+      sample$treatfin<-ifelse(sample$treatst==1 & sample$presstatusd==0,1,0)
+      treatind<-model.matrix(~treatst:indx-1,sample)
+      treatind<-treatind[,1:(quant)]
+      
+      X<-model.matrix(~ treatmentgroup+#indx+
+                        LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
+                        sqfeet+ #prediffdate+predate+prelogprice+presstatusd+
+                        data.matrix(year[,4:25])-1,sample)
+      
+      qr.X <- qr(X, tol=1e-3, LAPACK = FALSE)
+      (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
+      (keep <- qr.X$pivot[seq_len(rnkX)])
+      ## 1 2 4 5 
+      X <- X[,keep]
+      
+      results.lm.t.did<-felm(logprice ~treatind+X|as.factor(PropertyAddressCensusTractAndBlock),sample) #as.factor(HHID)+
+      summary(results.lm.t.did)
+      
+      
+      taus <- c(.1,.25,.5,.75,.90)
+      taus <- c(.1,.2,.3,.4,.5,.6,.7,.8,.9)
+      #for( i in 1:length(taus)){
+      qr<-rq(sample$logprice ~treatind+X+as.factor(sample$PropertyAddressCensusTractAndBlock),tau=taus)
+      summary()
+      
+      #}
+      
+      
+      tsample<-sample[control==0,]
+      year<-select(tsample, starts_with('year'))
+      
+      tsample$tprelprice<-tsample$prelogprice*tsample$treatst
+      indxt<- factor(as.numeric(cut2(tsample$preprice, g=quant)))
+      treatindt<-model.matrix(~treatst:indxt-1,tsample)
+      treatindt<-treatindt[,1:(quant)]
+      
+      X<-model.matrix(~ #treatmentgroup+#indx+
+                        LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
+                        sqfeet+ prediffdate+predate+prelogprice+
+                        day+bs(day, df = 10)+#poly(day,10)+
+                        data.matrix(year[,4:25])-1,tsample)
+      qr.X <- qr(X, tol=1e-3, LAPACK = FALSE)
+      (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
+      (keep <- qr.X$pivot[seq_len(rnkX)])
+      ## 1 2 4 5 
+      X <- X[,keep]
+      
+      results.lm.t.es<-felm(logprice ~treatindt+X|as.factor(PropertyAddressCensusTractAndBlock),tsample)
+      summary(results.lm.t.es)
+      
+      
+      if(treatc=="TATE"){
+        betas.lm.t.did.TATE[,di]<-as.numeric(coef(summary(results.lm.t.did))[,"Estimate"][1:quant])
+        betas.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][1:quant])
+        ses.lm.t.did.TATE[,di]<-as.numeric(coef(summary(results.lm.t.did))[,"Std. Error"][1:quant])
+        ses.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][1:quant])
+        ps.lm.t.did.TATE[,di]<-as.numeric(coef(summary(results.lm.t.did))[,"Pr(>|t|)"][1:quant])
+        ps.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][1:quant])
+      }
+      
+      if(treatc=="MUATE"){
+        betas.lm.t.did.MUATE[,di]<-as.numeric(coef(summary(results.lm.t.did))[,"Estimate"][1:quant])
+        betas.lm.t.es.MUATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][1:quant])
+        ses.lm.t.did.MUATE[,di]<-as.numeric(coef(summary(results.lm.t.did))[,"Std. Error"][1:quant])
+        ses.lm.t.es.MUATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][1:quant])
+        ps.lm.t.did.MUATE[,di]<-as.numeric(coef(summary(results.lm.t.did))[,"Pr(>|t|)"][1:quant])
+        ps.lm.t.es.MUATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][1:quant])
+      }
+      
+      if(treatc=="WLATE"){
+        betas.lm.t.did.WLATE[,di]<-as.numeric(coef(summary(results.lm.t.did))[,"Estimate"][1:quant])
+        betas.lm.t.es.WLATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][1:quant])
+        ses.lm.t.did.WLATE[,di]<-as.numeric(coef(summary(results.lm.t.did))[,"Std. Error"][1:quant])
+        ses.lm.t.es.WLATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][1:quant])
+        ps.lm.t.did.WLATE[,di]<-as.numeric(coef(summary(results.lm.t.did))[,"Pr(>|t|)"][1:quant])
+        ps.lm.t.es.WLATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][1:quant])
+      }
+      #assign(paste0('lm.TATE.',k,i),lm.TATE)
+      summary(results.lm.t.did)
+      summary(results.lm.t.es)
+      
+      
+      sdf<-10
+      lat<-sample$PropertyAddressLatitude
+      long<-sample$PropertyAddressLongitude
+      splat<-bs(lat, df = sdf)
+      splong<-bs(long, df = sdf)
+      spint<-model.matrix(~splat:splong)
+      
+      xcTATE<-cbind(splat,splong,spint,lat,long,poly(sample$day,5),bs(sample$day, df = 10))
+      year<-select(sample, starts_with('year'))
+      
+      feTATE<-model.matrix(~ treatind+data.matrix(year[,4:25]),sample)#+#timefedControlsComplete+timefed +
+      #aftfinalnpl+timefinalnplfe+
+      #data.matrix(exdum)+
+      #data.matrix(year[,25]),sample)
+      feTATE<-as.matrix(feTATE[,SD(feTATE)>0])
+      feTATE<-as.matrix(feTATE[,!duplicated(cor(feTATE))])
+      qr.X <- qr(feTATE, tol=1e-3, LAPACK = FALSE)
+      (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
+      (keep <- qr.X$pivot[seq_len(rnkX)])
+      ## 1 2 4 5 
+      feTATE <- feTATE[,keep]
+      
+      W<-cbind(xcTATE,xTATE,feTATE)
+      A<-sample$treatmentgroup
+      V<-feTATE
+      Time<-sample$day
+      
+      results.tmle.t.did <- tmleMSM(Y = sample$demlogprice, A = A, W = W, V = V, #T= Time,
+                                    MSM = "A + V",family="gaussian", 
+                                    Q.SL.library = SL.library2$as.list(),
+                                    g.SL.library = PS.library2$as.list(),
+                                    #Qform = Y ~ A+V+W,
+                                    #gform = A~1,
+                                    #hAVform = A~ 1,
+                                    ub = 20,
+                                    V_SL =5,
+                                    alpha = 0.70,
+                                    inference = TRUE,
+                                    verbose=TRUE)
+      print(results.tmle.t.did)
+      
+      
+      
+      sdf<-5
+      lat<-sample$PropertyAddressLatitude
+      long<-sample$PropertyAddressLongitude
+      splat<-bs(lat, df = sdf)
+      splong<-bs(long, df = sdf)
+      spint<-model.matrix(~splat:splong)
+      
+      xcTATE<-cbind(splat,splong,spint,lat,long,poly(sample$day,5),bs(sample$day, df = 10))
+      feTATEes<-model.matrix(~ treatexCC+#aftfinalnpl+
+                               #as.matrix(exdum)
+                               -1,tsample)
+      feTATEes<-as.matrix(feTATEes[,SD(feTATEes)>0])
+      if(dim(feTATEes)[2]>1){
+        feTATEes<-feTATEes[,!duplicated(cor(feTATEes))]
+      }
+      qr.X <- qr(feTATEes, tol=1e-3, LAPACK = FALSE)
+      (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
+      (keep <- qr.X$pivot[seq_len(rnkX)])
+      ## 1 2 4 5 
+      feTATEes <- feTATEes[,keep]
+      if(nocc==0&dim(as.matrix(feTATEes))[2]>0){
+        if(dim(data.matrix(tsample))[1]>40){
+          W<-cbind(xcTATE[sample$control==0,],xTATE[sample$control==0,],feTATEes)
+          
+          A<-sample[control==0,treatst]
+          V<-feTATEes
+          Time<-sample[control==0,day]
+          
+          results.tmle.t.es <- tmleMSM(Y = tsample$logprice, A = A, W = W, V = V, #T= Time,
+                                       MSM = "A + V",family="gaussian", 
+                                       Q.SL.library = SL.library2$as.list(),
+                                       g.SL.library = PS.library2$as.list(),
+                                       #Qform = Y ~ A+V+W,
+                                       #gform = A~1,
+                                       #hAVform = A~ 1,
+                                       ub = 20,
+                                       V_SL =5,
+                                       alpha = 0.90,
+                                       inference = TRUE,
+                                       verbose=TRUE)
+          print(results.tmle.t.es)
+          
+          betas.tmle.t.es[di,treat]<-results.tmle.t.es$psi["A"]
+          ses.tmle.t.es[di,treat]<-results.tmle.t.es$se["A"]
+          ps.tmle.t.es[di,treat]<-results.tmle.t.es$pvalue["A"]
+          
+          cc.betas.tmle.t.es[di,treat]<-results.tmle.t.es$psi["V"]
+          cc.ses.tmle.t.es[di,treat]<-results.tmle.t.es$se["V"]
+          cc.ps.tmle.t.es[di,treat]<-results.tmle.t.es$pvalue["V"]
+          
+          
+        }}
+      
+      
+      
+      betas.tmle.t.did[di,treat]<-results.tmle.t.did$psi["A"]
+      ses.tmle.t.did[di,treat]<-results.tmle.t.did$se["A"]
+      ps.tmle.t.did[di,treat]<-results.tmle.t.did$pvalue["A"]
+      
+      if(nocc==0 &notg==0){
+        cc.betas.tmle.t.did[di,treat]<-results.tmle.t.did$psi["VtreatexCC"]
+        cc.ses.tmle.t.did[di,treat]<-results.tmle.t.did$se["VtreatexCC"]
+        cc.ps.tmle.t.did[di,treat]<-results.tmle.t.did$pvalue["VtreatexCC"]
+      }
+      
+      
+      print(paste0('distance = ',dic))
+      print(paste0('treat = ',treatc))
+      print(paste0('site = ',psite))
+    }
+  }
+}
+for(statchange in c('','cc.')){
+  for(meth in c('lm','tmle')){
+    for(inf in c('did','es')){
+      #meth<-'tmle'
+      p<-get(paste0(statchange,'ps.',meth,'.t.',inf))
+      mystars <- ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "* ", ifelse(p < .1, "^\\bullet  ", " "))))
+      
+      pb<-exp(get(paste0(statchange,'betas.',meth,'.t.',inf)))-1
+      rpb<-round(pb,3)
+      se<-round(exp(get(paste0(statchange,'ses.',meth,'.t.',inf)))-1,3)
+      
+      srpb <- matrix(paste(rpb, mystars, sep=""), ncol=dim(pb)[2] )
+      nsrpb<-rbind(c("",laglead),cbind(dist,srpb))
+      
+      #colnames(srpb)<-laglead
+      #rownames(srpb)<-dist
+      
+      results.mat<-matrix(nrow= 2*dim(srpb)[1],ncol= dim(srpb)[2])
+      
+      for(i in 1:dim(results.mat)[1]){
+        if(i %% 2 != 0){
+          results.mat[i,]<-srpb[ceiling(i/2),]
+          #    rownames(ols.mat)[i]<-rownames(srpb)[ceiling(i/2)]
+        }
+        if(i %% 2 == 0){
+          results.mat[i,]<-paste0('(',se[ceiling(i/2),],')')
+        }
+      }
+      
+      #results.mat<-cbind(c('10k','','8k','','6k','','4k','','2k',''),results.mat)
+      #results.mat<-rbind(c('',laglead),results.mat)
+      xtable(results.mat)
+      print.xtable(xtable(results.mat),include.rownames=FALSE, 
+                   include.colnames=FALSE, sanitize.text.function = identity,
+                   type="latex", file=paste0(path,meth,inf,psite,statchange,"buffer",buf,".tex"))
+    }
+  }
+}
+}
 }
 
 #Well Average Treatment Effect
