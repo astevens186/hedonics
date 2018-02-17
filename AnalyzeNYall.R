@@ -38,7 +38,7 @@ opNPL<- pNPL#[order(pNPL$date),]
 ofNPL<- fNPL#[order(fNPL$date),] 
 odNPL<- dNPL#[order(dNPL$date),] 
 opdNPL<- pdNPL#[order(pdNPL$date),] 
-
+odNPL<-odNPL[odNPL$rstate_code == "NY",]
 ##set up superlearner for TMLE
 num_cores = RhpcBLASctl::get_num_cores()
 
@@ -474,10 +474,10 @@ for(treat in  1:length(treatl)){
     # sample$logprice<-sample$logprice.x
     if(treatc=='TATE'){
       #Total Average Treatment Effect
-      timefe<-dpylr::select(sample, starts_with('timefe'))
-      treatgroupm<-dpylr::select(sample, starts_with('treatmentgroup'))
-      year<-dpylr::select(sample, starts_with('year'))
-      bin<-dpylr::select(sample, starts_with('bin'))
+      timefe<-dplyr::select(sample, starts_with('timefe'))
+      treatgroupm<-dplyr::select(sample, starts_with('treatmentgroup'))
+      year<-dplyr::select(sample, starts_with('year'))
+      bin<-dplyr::select(sample, starts_with('bin'))
       sample$demlogprice<-demeanlist(sample$logprice,
                                      list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
       sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
@@ -498,10 +498,10 @@ for(treat in  1:length(treatl)){
       sample$sample.MUATE<-sample$control+sample$treatgroupMU
       
       sample<-subset(sample, sample.MUATE==1)
-      timefe<-dpylr::select(sample, starts_with('timefe'))
-      treatgroupm<-dpylr::select(sample, starts_with('treatmentgroup'))
-      year<-dpylr::select(sample, starts_with('year'))
-      bin<-dpylr::select(sample, starts_with('bin'))
+      timefe<-dplyr::select(sample, starts_with('timefe'))
+      treatgroupm<-dplyr::select(sample, starts_with('treatmentgroup'))
+      year<-dplyr::select(sample, starts_with('year'))
+      bin<-dplyr::select(sample, starts_with('bin'))
       sample$demlogprice<-demeanlist(sample$logprice,
                                      list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
       sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
@@ -523,10 +523,10 @@ for(treat in  1:length(treatl)){
       sample$sample.WLATE<-sample$control+sample$treatgroupWL
       
       sample<-subset(sample, sample.WLATE==1)
-      timefe<-dpylr::select(sample, starts_with('timefe'))
-      treatgroupm<-dpylr::select(sample, starts_with('treatmentgroup'))
-      year<-dpylr::select(sample, starts_with('year'))
-      bin<-dpylr::select(sample, starts_with('bin'))
+      timefe<-dplyr::select(sample, starts_with('timefe'))
+      treatgroupm<-dplyr::select(sample, starts_with('treatmentgroup'))
+      year<-dplyr::select(sample, starts_with('year'))
+      bin<-dplyr::select(sample, starts_with('bin'))
       sample$demlogprice<-demeanlist(sample$logprice,
                                      list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
       sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
@@ -568,9 +568,9 @@ for(treat in  1:length(treatl)){
       treatind<-model.matrix(~treatst:indx-1,sample)
       treatind<-treatind[,1:(quant)]
       
-      X<-model.matrix(~ treatmentgroup+timetotreat+#as.factor(round(timetotreat,1))+#indx+
+      X<-model.matrix(~ treatmentgroup+timetotreat+day+as.factor(round(timetotreat,1))+#indx+
                         LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                        sqfeet+ prediffdate+predate+prelogprice+#presstatusd+
+                        sqfeet+ prediffdate+predate+#prelogprice+#presstatusd+
                         data.matrix(year[,4:25])-1,sample)
       
       qr.X <- qr(X, tol=1e-3, LAPACK = FALSE)
@@ -666,7 +666,7 @@ for(treat in  1:length(treatl)){
       spint<-model.matrix(~splat:splong)
       
       xcTATE<-cbind(splat,splong,spint,lat,long,poly(sample$day,5),bs(sample$day, df = 10))
-      year<-dpylr::select(sample, starts_with('year'))
+      year<-dplyr::select(sample, starts_with('year'))
 
         feTATE<-model.matrix(~ treatind+data.matrix(year[,4:25]),sample)#+#timefedControlsComplete+timefed +
         #aftfinalnpl+timefinalnplfe+
@@ -822,10 +822,10 @@ sample$controlWL<-sample$control*sample$WaterStndCode.fWL
 sample$sample.WLATE<-sample$control+sample$treatgroupWL
 
 sample.WLATE<-subset(sample, sample.WLATE==1)
-timefe<-dpylr::select(sample.WLATE, starts_with('timefe'))
-#treatgroupm<-dpylr::select(sample.WLATE, starts_with('treatmentgroup'))
-year<-dpylr::select(sample.WLATE, starts_with('year'))
-bin<-dpylr::select(sample.WLATE, starts_with('bin'))
+timefe<-dplyr::select(sample.WLATE, starts_with('timefe'))
+#treatgroupm<-dplyr::select(sample.WLATE, starts_with('treatmentgroup'))
+year<-dplyr::select(sample.WLATE, starts_with('year'))
+bin<-dplyr::select(sample.WLATE, starts_with('bin'))
 
 
 sample.WLATE$demlogprice<-demeanlist(sample.WLATE$logprice,
@@ -845,7 +845,7 @@ lm.WLATE<-felm(logprice ~treatdgwWL+ LotSizeSquareFeet + YearBuilt + FullBath + 
                  + data.matrix(year[,3:25])+presstatus+prediffdate+predate+prelogprice
                |as.factor(PropertyAddressCensusTractAndBlock),sample.WLATE)
 tsample.WLATE<-sample.WLATE[control==0,]
-year<-dpylr::select(tsample.WLATE, starts_with('year'))
+year<-dplyr::select(tsample.WLATE, starts_with('year'))
 t.lm.WLATE<-felm(logprice ~treatdgwWL+ LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
                    sqfeet+ treatmentgroup   + 
                    + data.matrix(year[,3:25])+presstatus+prediffdate+predate+prelogprice
@@ -862,10 +862,10 @@ sample$controlMU<-sample$control*sample$WaterStndCode.fMU
 sample$sample.MUATE<-sample$control+sample$treatgroupMU
 
 sample.MUATE<-subset(sample, sample.MUATE==1)
-timefe<-dpylr::select(sample.MUATE, starts_with('timefe'))
-treatgroupm<-dpylr::select(sample.MUATE, starts_with('treatmentgroup'))
-year<-dpylr::select(sample.MUATE, starts_with('year'))
-bin<-dpylr::select(sample.MUATE, starts_with('bin'))
+timefe<-dplyr::select(sample.MUATE, starts_with('timefe'))
+treatgroupm<-dplyr::select(sample.MUATE, starts_with('treatmentgroup'))
+year<-dplyr::select(sample.MUATE, starts_with('year'))
+bin<-dplyr::select(sample.MUATE, starts_with('bin'))
 sample.MUATE$demlogprice<-demeanlist(sample.MUATE$logprice,
                                      list(as.factor(sample.MUATE$PropertyAddressCensusTractAndBlock)))
 
@@ -883,7 +883,7 @@ lm.MUATE<-felm(logprice ~treatdgwMU+ LotSizeSquareFeet + YearBuilt + FullBath + 
                  + data.matrix(year[,3:25])+presstatus+prediffdate+predate+prelogprice
                |as.factor(PropertyAddressCensusTractAndBlock),sample.MUATE)
 tsample.MUATE<-sample.MUATE[control==0,]
-year<-dpylr::select(tsample.MUATE, starts_with('year'))
+year<-dplyr::select(tsample.MUATE, starts_with('year'))
 t.lm.MUATE<-felm(logprice ~treatdgwMU+ LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
                    sqfeet+treatmentgroup   + 
                    + data.matrix(year[,3:25])+presstatus+prediffdate+predate+prelogprice
