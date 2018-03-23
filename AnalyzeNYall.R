@@ -17,7 +17,7 @@ pkgTest <- function(x) {
 }
 
 ## These lines load the required packages
-packages <- c("readxl","Hmisc","qgam","quantreg","sphet","mgcv","McSpatial","pastecs","rdd","Matrix","psych","xtable","splines","ck37r","data.table","matrixStats","tmle","xgboost", "MatchIt","gtools","statar","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
+packages <- c("readxl","Hmisc","DescTools","qgam","quantreg","sphet","mgcv","McSpatial","pastecs","rdd","Matrix","psych","xtable","splines","ck37r","data.table","matrixStats","tmle","xgboost", "MatchIt","gtools","statar","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
 lapply(packages, pkgTest)
 
 #library(statar)
@@ -408,12 +408,156 @@ for(psite in psitel){
   saveRDS(sample.new, file = paste(path,'fullbaj',psite,'.rds', sep=""), ascii = FALSE, version = NULL,
           compress = TRUE, refhook = NULL)
 }
-for(treat in  1:length(treatl)){
+
+if(TRUE){
+dist<-c('10k','8k','6k','4k','2k')#,'1k','500m')
+
+#dist<-c('4k','2k')#,'1k','500m')
+
+laglead<-c("")
+llc<-laglead[1]
+treatl<-c('TATE','MUATE','WLATE')
+dNPL$row<-seq(1:dim(dNPL)[1])
+psitel<-dNPL[dNPL$rsitinc_desc=="LANDFILL","row"]
+psitel<-psitel[psitel!=3]
+
+psite<-psitel[1]
+samplefull<-readRDS(paste(path,'fullbaj',psite,'.rds', sep=""), refhook = NULL)
+samplefull<-samplefull[predate>0,]
+samplefull$treatst<-samplefull[[paste0('treatdgw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
+buf<-1
+#samplefull$buffer<-ifelse(samplefull$date-odNPL$date[psite]+(buf*365)>0&samplefull$date-odNPL$date[psite]<0,1,0)
+samplefull$buffer<-ifelse(abs(samplefull$date-odNPL$date[psite])-(buf*365)<0,1,0)
+samplefull<-samplefull[buffer<1,]
+samplefull$timetotreat<-samplefull$date-odNPL$date[psite]
+samplefull$lsite<-psite
+samplefull$demlogprice<-demeanlist(samplefull$logprice,
+                               list(as.factor(samplefull$PropertyAddressCensusTractAndBlock)))
+# sample$logprice<-sample$logprice.x
+  #Total Average Treatment Effect
   
-  treatc<-treatl[[treat]]
+  samplefull$aftpropnpl<-samplefull[[paste0('aftpropnpl',psite)]]
+  
+  #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
+  #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
+  samplefull$treatControlsComplete<-samplefull[[paste0('treatControlsComplete',psite)]]
+  samplefull$timefed<-samplefull[[paste0('timefed',psite)]]
+  samplefull$timefedControlsComplete<-samplefull[[paste0('timefedControlsComplete',psite)]]
+  samplefull$treatexCC<-ifelse(samplefull$treatControlsComplete==1 &samplefull$treatst==0,1,0)
+
+  #Municipal ATE
+  samplefull$treatdgwMU<- samplefull[[paste0('treatd',llc,'gw',psite)]]* samplefull$WaterStndCode.fMU
+  samplefull$treatgroupMU<-samplefull$treatmentgroup * samplefull$WaterStndCode.fMU
+  samplefull$controlMU<-samplefull$control*samplefull$WaterStndCode.fMU
+  
+  samplefull$sample.MUATE<-samplefull$control+samplefull$treatgroupMU
+  
+
+  samplefull$aftpropnpl<-samplefull[[paste0('aftpropnpl',psite)]]
+  
+  #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
+  #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
+  samplefull$treatControlsComplete<-samplefull[[paste0('treatControlsComplete',psite)]]
+  samplefull$timefed<-samplefull[[paste0('timefed',psite)]]
+  samplefull$timefedControlsComplete<-samplefull[[paste0('timefedControlsComplete',psite)]]
+  #sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
+  samplefull$treatexCC<-ifelse(samplefull$treatControlsComplete==1 &samplefull$treatst==0,1,0)
+
+
+  #Municipal ATE
+  samplefull$treatdgwWL<- samplefull[[paste0('treatd',llc,'gw',psite)]]* samplefull$WaterStndCode.fWL
+  samplefull$treatgroupWL<-samplefull$treatmentgroup * samplefull$WaterStndCode.fWL
+  samplefull$controlWL<-samplefull$control*samplefull$WaterStndCode.fWL
+  
+  samplefull$sample.WLATE<-samplefull$control+samplefull$treatgroupWL
+  
+  samplefull$aftpropnpl<-samplefull[[paste0('aftpropnpl',psite)]]
+  
+  #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
+  #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
+  samplefull$treatControlsComplete<-samplefull[[paste0('treatControlsComplete',psite)]]
+  samplefull$timefed<-samplefull[[paste0('timefed',psite)]]
+  samplefull$timefedControlsComplete<-samplefull[[paste0('timefedControlsComplete',psite)]]
+  #sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
+  samplefull$treatexCC<-ifelse(samplefull$treatControlsComplete==1 &samplefull$treatst==0,1,0)
+
+
+for(psite in psitel[2:length(psitel)]){
+  sample2<-readRDS(paste(path,'fullbaj',psite,'.rds', sep=""), refhook = NULL)
+  sample2<-sample2[predate>0,]
+  sample2$treatst<-sample2[[paste0('treatdgw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
+  buf<-1
+  #sample2$buffer<-ifelse(sample2$date-odNPL$date[psite]+(buf*365)>0&sample2$date-odNPL$date[psite]<0,1,0)
+  sample2$buffer<-ifelse(abs(sample2$date-odNPL$date[psite])-(buf*365)<0,1,0)
+  sample2<-sample2[buffer<1,]
+  sample2$timetotreat<-sample2$date-odNPL$date[psite]
+  sample2$lsite<-psite
+  
+  sample2$demlogprice<-demeanlist(sample2$logprice,
+                                 list(as.factor(sample2$PropertyAddressCensusTractAndBlock)))
+  sample2$aftpropnpl<-sample2[[paste0('aftpropnpl',psite)]]
+  
+  #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
+  #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
+  sample2$treatControlsComplete<-sample2[[paste0('treatControlsComplete',psite)]]
+  sample2$timefed<-sample2[[paste0('timefed',psite)]]
+  sample2$timefedControlsComplete<-sample2[[paste0('timefedControlsComplete',psite)]]
+  sample2$treatexCC<-ifelse(sample2$treatControlsComplete==1 &sample2$treatst==0,1,0)
+  
+  #Municipal ATE
+  sample2$treatdgwMU<- sample2[[paste0('treatd',llc,'gw',psite)]]* sample2$WaterStndCode.fMU
+  sample2$treatgroupMU<-sample2$treatmentgroup * sample2$WaterStndCode.fMU
+  sample2$controlMU<-sample2$control*sample2$WaterStndCode.fMU
+  
+  sample2$sample.MUATE<-sample2$control+sample2$treatgroupMU
+  
+  
+  sample2$aftpropnpl<-sample2[[paste0('aftpropnpl',psite)]]
+  
+  #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
+  #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
+  sample2$treatControlsComplete<-sample2[[paste0('treatControlsComplete',psite)]]
+  sample2$timefed<-sample2[[paste0('timefed',psite)]]
+  sample2$timefedControlsComplete<-sample2[[paste0('timefedControlsComplete',psite)]]
+  #sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
+  sample2$treatexCC<-ifelse(sample2$treatControlsComplete==1 &sample2$treatst==0,1,0)
+  
+  
+  #Municipal ATE
+  sample2$treatdgwWL<- sample2[[paste0('treatd',llc,'gw',psite)]]* sample2$WaterStndCode.fWL
+  sample2$treatgroupWL<-sample2$treatmentgroup * sample2$WaterStndCode.fWL
+  sample2$controlWL<-sample2$control*sample2$WaterStndCode.fWL
+  
+  sample2$sample.WLATE<-sample2$control+sample2$treatgroupWL
+  
+  sample2$aftpropnpl<-sample2[[paste0('aftpropnpl',psite)]]
+  
+  #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
+  #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
+  sample2$treatControlsComplete<-sample2[[paste0('treatControlsComplete',psite)]]
+  sample2$timefed<-sample2[[paste0('timefed',psite)]]
+  sample2$timefedControlsComplete<-sample2[[paste0('timefedControlsComplete',psite)]]
+  #sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
+  sample2$treatexCC<-ifelse(sample2$treatControlsComplete==1 &sample2$treatst==0,1,0)
+  
+  samplefull<-rbind(samplefull,sample2)
+  
+}
+
+#psite<-2
+samplefull$timetotreat<-samplefull$timetotreat/365
+samplefull<-samplefull[abs(timetotreat)-10<0,]
+samplefull$treatd0gw<-samplefull$treatdgw
+#samplefull<-samplefull[samplefull$price>15000,]
+#samplefull$price<-Winsorize(samplefull$price)
+}
+
+if(TRUE){
+  
+  treatc<-treatl[[1]]
   #for(ll in 1:length(laglead)){
-  for(di in 1:length(dist)){
-    dic<-dist[[di]]
+  
+    dic<-dist[[1]]
     ll<-1
     llc<-laglead[[ll]]
     sample<-samplefull[samplefull[[paste0('dist',dic)]]>0,]
@@ -457,11 +601,11 @@ for(treat in  1:length(treatl)){
       dist.mat<-distm (cbind(d.sample.data$PropertyAddressLongitude, d.sample.data$PropertyAddressLatitude), fun = distHaversine)
       
       Wtime<- function(c,q){  
-        t<-d.sample.data$date
+        t<-d.sample.data$predate
         rep.row<-function(x,n){
           matrix(rep(x,each=n),nrow=n)
         }
-        t<-d.sample.data$date
+        t<-d.sample.data$predate
         T1<-rep.row(t,nrow(d.sample.data))
         T2<-T1
         T1<-t(T1)
@@ -546,9 +690,11 @@ for(treat in  1:length(treatl)){
       
       #diag(Wst)<-0
       #Wst<-mat2listw(Wst, style="W")
+      sample[[paste0('lagu',u,'l',l, 'sp',p,'c',c, 'tp',q,sep="")]]<-Wst %*% sample$price
+      sample[[paste0('lnlagu',u,'l',l, 'sp',p,'c',c, 'tp',q,sep="")]]<-Wst %*%sample$logprice
       
       
-      saveRDS(Wst, file = path, ascii = FALSE, version = NULL,
+      saveRDS(sample, file = path, ascii = FALSE, version = NULL,
               compress = TRUE, refhook = NULL)
       #stop cluster
       
@@ -556,84 +702,144 @@ for(treat in  1:length(treatl)){
     start.time <- Sys.time()
     
     W.trend.lag.variables(upper.spatial.range,lower.spatial.range,spatial.power.range,
-                          temporal.cut.range,temporal.power.range,paste0(path,"Wmat",treatc,dic,".rds"))
+                          temporal.cut.range,temporal.power.range,paste0(path,"pretreatlag.rds"))
     
     end.time <- Sys.time()
     time.taken <- end.time - start.time
     time.taken
-  }
+    
+    
 }
 
-psitel<-c(2,15,16)
-psitel<-c(2,11,12,15,16,19,20,21)
+dist<-c('10k','8k','6k','4k','2k')#,'1k','500m')
 
+#dist<-c('4k','2k')#,'1k','500m')
 
-dNPL$row<-seq(1:dim(dNPL)[1])
-psitel<-dNPL[dNPL$rsitinc_desc=="LANDFILL","row"]
+laglead<-c("")
+treatl<-c('TATE','MUATE','WLATE')
+sample<-readRDS(paste0(path,"pretreatlag.rds")
+                    , refhook = NULL)
 
-psite<-psitel[1]
-samplefull<-readRDS(paste(path,'fullbaj',psite,'.rds', sep=""), refhook = NULL)
-samplefull<-samplefull[predate>0,]
-samplefull$treatst<-samplefull[[paste0('treatdgw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
-buf<-1
-#samplefull$buffer<-ifelse(samplefull$date-odNPL$date[psite]+(buf*365)>0&samplefull$date-odNPL$date[psite]<0,1,0)
-samplefull$buffer<-ifelse(abs(samplefull$date-odNPL$date[psite])-(buf*365)<0,1,0)
-samplefull<-samplefull[buffer<1,]
-samplefull$timetotreat<-samplefull$date-odNPL$date[psite]
-samplefull$lsite<-psite
-
-for(psite in psitel[2:length(psitel)]){
-  sample2<-readRDS(paste(path,'fullbaj',psite,'.rds', sep=""), refhook = NULL)
-  sample2<-sample2[predate>0,]
-  sample2$treatst<-sample2[[paste0('treatdgw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
-  buf<-1
-  #sample2$buffer<-ifelse(sample2$date-odNPL$date[psite]+(buf*365)>0&sample2$date-odNPL$date[psite]<0,1,0)
-  sample2$buffer<-ifelse(abs(sample2$date-odNPL$date[psite])-(buf*365)<0,1,0)
-  sample2<-sample2[buffer<1,]
-  sample2$timetotreat<-sample2$date-odNPL$date[psite]
-  sample2$lsite<-psite
-  samplefull<-rbind(samplefull,sample2)
-}
-
-#psite<-2
-samplefull$timetotreat<-samplefull$timetotreat/365
-samplefull<-samplefull[abs(timetotreat)-10<0,]
-samplefull$treatd0gw<-samplefull$treatdgw
-samplefull<-samplefull[samplefull$price>15000,]
+samplefull<-sample
 quant<-10
 qcut<-cut2(samplefull$preprice, g=quant, onlycuts = TRUE)
 
-price.ag <- aggregate(price ~ treatmentgroup, data=samplefull, FUN=mean, na.rm=TRUE)
-sqfeet.ag <- aggregate(sqfeet ~ treatmentgroup, data=samplefull, FUN=mean, na.rm=TRUE)
-TotalRooms.ag <- aggregate(TotalRooms ~ treatmentgroup, data=samplefull, FUN=mean, na.rm=TRUE)
-YearBuilt.ag <- aggregate(YearBuilt ~ treatmentgroup, data=samplefull, FUN=mean, na.rm=TRUE)
-FullBath.ag <- aggregate(FullBath ~ treatmentgroup, data=samplefull, FUN=mean, na.rm=TRUE)
+p <- ggplot(samplefull, aes(x=logprice, fill= as.character(treatmentgroup))) +
+  geom_density(alpha=.3) + 
+  xlab("Log Price") + 
+  ylab("Density")+
+guides(fill=guide_legend(title="Treatment Group"))
+
+lp <- ggplot(samplefull, aes(x=prelogprice, fill= as.character(treatmentgroup))) +
+  geom_density(alpha=.3) + 
+  xlab("Pretreatment Log Price") + 
+  ylab("Density")+
+ guides(fill=guide_legend(title="Treatment Group"))
+
+sf <- ggplot(samplefull, aes(x=log(sqfeet), fill= as.character(treatmentgroup))) +
+  geom_density(alpha=.3) + 
+  xlab("Log(Square Feet)") + 
+  ylab("Density")+
+  guides(fill=guide_legend(title="Treatment Group"))
+
+da <- ggplot(samplefull, aes(x=as.Date(RecordingDate), fill= as.character(treatmentgroup))) +
+  geom_density(alpha=.5,adjust=2) + 
+  xlab("Date") + 
+  ylab("Density")+
+  guides(fill=guide_legend(title="Treatment Group"))
+
+yb <- ggplot(samplefull, aes(x=YearBuilt, fill= as.character(treatmentgroup))) +
+  geom_density(alpha=.5,adjust=2) + 
+  xlab("Year Built") + 
+  ylab("Density")+
+  guides(fill=guide_legend(title="Treatment Group"))
+
+fb <- ggplot(samplefull, aes(x=FullBath, fill= as.character(treatmentgroup))) +
+  geom_density(alpha=.5,adjust=2) + 
+  xlab("Full Bath") + 
+  ylab("Density")+
+  guides(fill=guide_legend(title="Treatment Group"))
+
+
+ls <- ggplot(samplefull, aes(x=LotSizeSquareFeet, fill= as.character(treatmentgroup))) +
+  geom_density(alpha=.5,adjust=2) + 
+  xlab("Full Bath") + 
+  ylab("Density")+
+  guides(fill=guide_legend(title="Treatment Group"))
 
 sumvar<-c("price","sqfeet","TotalRooms","YearBuilt","FullBath")
-ts<-samplefull[treatmentgroup==1,c("price","sqfeet","YearBuilt","RecordingDate")]
-ts$year <- factor(format(as.Date(ts$RecordingDate),'%Y'))
-cs<-samplefull[treatmentgroup==0,c("price","sqfeet","YearBuilt","RecordingDate")]
-cs$year <- factor(format(as.Date(cs$RecordingDate),'%Y'))
-B <- matrix( c(min(ts$price), min(cs$price), median(ts$price), median(cs$price),
-               mean(ts$price), mean(cs$price),max(ts$price),max(cs$price),
-               min(ts$sqfeet), min(cs$sqfeet), median(ts$sqfeet), median(cs$sqfeet),
-               mean(ts$sqfeet), mean(cs$sqfeet),max(ts$sqfeet),max(cs$sqfeet),
-               min(as.numeric(as.character(ts$year))), min(as.numeric(as.character(cs$year))), 
-               median(as.numeric(as.character(ts$year))), median(as.numeric(as.character(cs$year))),
-               mean(as.numeric(as.character(ts$year))), mean(as.numeric(as.character(cs$year))),
-               max(as.numeric(as.character(ts$year))),max(as.numeric(as.character(cs$year))),
-               length(ts$year),length(cs$year)), nrow=2, ncol=13)
-sumtab<-t(floor(B))
-sumtab[9:12,]<-as.Date(sumtab[9:12,])
-colnames(sumtab)<-c("Treatment Group","Control Group")
-rownames(sumtab)<-c("Min. Price","Med. Price", "Mean Price", "Max. Price",
-                    "Min. Sq. Feet","Med. Sq. Feet", "Mean Sq. Feet", "Max. Sq. Feet",
-                    "Min. Year","Med. Year", "Mean Year", "Max. Year","Obs")
+ts<-sample[treatmentgroup==1,c("price","sqfeet","YearBuilt","RecordingDate","FullBath","LotSizeSquareFeet")]
+ts$year <- as.numeric(as.character(factor(format(as.Date(ts$RecordingDate),'%Y'))))
+cs<-sample[treatmentgroup==0,c("price","sqfeet","YearBuilt","RecordingDate","FullBath","LotSizeSquareFeet")]
+cs$year <- as.numeric(as.character(factor(format(as.Date(cs$RecordingDate),'%Y'))))
 
-xtable(sumtab)
-print.xtable(xtable(floor(sumtab),digits=c(0,0,0)),include.rownames=TRUE, 
-             include.colnames=TRUE, sanitize.text.function = identity,
+sum25<-rbind("25th percentile",quantile(ts$price)[2],quantile(ts$sqfeet)[2],quantile(ts$YearBuilt)[2],quantile(ts$year)[2],quantile(ts$FullBath)[2],quantile(ts$LotSizeSquareFeet)[2],
+           quantile(cs$price)[2],quantile(cs$sqfeet)[2],quantile(cs$YearBuilt)[2],quantile(cs$year)[2],quantile(cs$FullBath)[2],quantile(cs$LotSizeSquareFeet)[2])
+summed<-rbind("Median",median(ts$price),median(ts$sqfeet),median(ts$YearBuilt),median(ts$year),median(ts$FullBath),median(ts$LotSizeSquareFeet),
+           median(cs$price),median(cs$sqfeet),median(cs$YearBuilt),median(cs$year),median(cs$FullBath),median(cs$LotSizeSquareFeet))
+summean<-rbind("Mean",floor(mean(ts$price)),floor(mean(ts$sqfeet)),floor(mean(ts$YearBuilt)),floor(mean(ts$year)),floor(mean(ts$FullBath)),floor(mean(ts$LotSizeSquareFeet)),
+            floor(mean(cs$price)),floor(mean(cs$sqfeet)),floor(mean(cs$YearBuilt)),floor(mean(cs$year)),floor(mean(cs$FullBath)),floor(mean(cs$LotSizeSquareFeet)))
+sum75<-rbind("75th percentile",quantile(ts$price)[4],quantile(ts$sqfeet)[4],quantile(ts$YearBuilt)[4],quantile(ts$year)[4],quantile(ts$FullBath)[4],quantile(ts$LotSizeSquareFeet)[4],
+           quantile(cs$price)[4],quantile(cs$sqfeet)[4],quantile(cs$YearBuilt)[4],quantile(cs$year)[4],quantile(cs$FullBath)[4],quantile(cs$LotSizeSquareFeet)[4])
+tdiff<-rbind("T-Test",base::round(as.numeric(t.test(ts$price,cs$price)["statistic"]),digits=2),
+             base::round(as.numeric(t.test(ts$sqfeet,cs$sqfeet)["statistic"]),digits=2),
+             base::round(as.numeric(t.test(ts$year,cs$year)["statistic"]),digits=2),
+             base::round(as.numeric(t.test(ts$YearBuilt,cs$YearBuilt)["statistic"]),digits=2),
+             base::round(as.numeric(t.test(ts$FullBath,cs$FullBath)["statistic"]),digits=2),
+             base::round(as.numeric(t.test(ts$LotSizeSquareFeet,cs$LotSizeSquareFeet)["statistic"]),digits=2),
+             base::round(as.numeric(t.test(cs$price,ts$price)["statistic"]),digits=2),
+             base::round(as.numeric(t.test(cs$sqfeet,ts$sqfeet)["statistic"]),digits=2),
+             base::round(as.numeric(t.test(cs$year,ts$year)["statistic"]),digits=2),
+             base::round(as.numeric(t.test(cs$YearBuilt,ts$YearBuilt)["statistic"]),digits=2),
+             base::round(as.numeric(t.test(cs$FullBath,ts$FullBath)["statistic"]),digits=2),
+             base::round(as.numeric(t.test(cs$LotSizeSquareFeet,ts$LotSizeSquareFeet)["statistic"]),digits=2))
+
+rlab<-rbind("     ","Price","Square Feet","Year Built","Year","Full Bathroom","Lot Size","Price","Square Feet","Year Built","Year","Full Bathroom","Lot Size")
+rlab2<-rbind("     ","Treatment","Group","  ","   ","  ","   ","Control","Group","  ","   ","  ","   ")
+sumtab<-cbind(rlab2,rlab,sum25,summed,summean,sum75,tdiff)
+rownames(sumtab)<-NULL
+colnames(sumtab)<-NULL
+sumtab
+
+xtab<-xtable(sumtab)
+align(xtab) <- "r|l|l|rrrr|r|"
+print.xtable(xtab,include.rownames=FALSE,  hline.after = c(0,1,dim(sumtab)[1]),
+             include.colnames=FALSE, sanitize.text.function = identity,
              type="latex", file=paste0(path,'latex/sumtab.tex'))
+
+
+sumvar<-c("price","sqfeet","TotalRooms","YearBuilt","FullBath")
+pts<-sample[treatmentgroup==1&timetotreat<0,c("price","sqfeet","YearBuilt","RecordingDate","FullBath","LotSizeSquareFeet")]
+pts$year <- as.numeric(as.character(factor(format(as.Date(pts$RecordingDate),'%Y'))))
+pcs<-sample[treatmentgroup==0&timetotreat<0,c("price","sqfeet","YearBuilt","RecordingDate","FullBath","LotSizeSquareFeet")]
+pcs$year <- as.numeric(as.character(factor(format(as.Date(pcs$RecordingDate),'%Y'))))
+ats<-sample[treatmentgroup==1&timetotreat>0,c("price","sqfeet","YearBuilt","RecordingDate","FullBath","LotSizeSquareFeet")]
+ats$year <- as.numeric(as.character(factor(format(as.Date(ats$RecordingDate),'%Y'))))
+acs<-sample[treatmentgroup==0&timetotreat>0,c("price","sqfeet","YearBuilt","RecordingDate","FullBath","LotSizeSquareFeet")]
+acs$year <- as.numeric(as.character(factor(format(as.Date(acs$RecordingDate),'%Y'))))
+
+
+sum25<-rbind("25th percentile",quantile(pts$price)[2],quantile(pts$sqfeet)[2],quantile(pts$YearBuilt)[2],quantile(pts$year)[2],quantile(pts$LotSizeSquareFeet)[2],
+           quantile(pcs$price)[2],quantile(pcs$sqfeet)[2],quantile(pcs$YearBuilt)[2],quantile(pcs$year)[2],quantile(pcs$LotSizeSquareFeet)[2],
+           quantile(ats$price)[2],quantile(ats$sqfeet)[2],quantile(ats$YearBuilt)[2],quantile(ats$year)[2],quantile(ats$LotSizeSquareFeet)[2],
+           quantile(acs$price)[2],quantile(acs$sqfeet)[2],quantile(acs$YearBuilt)[2],quantile(acs$year)[2],quantile(acs$LotSizeSquareFeet)[2])
+summed<-rbind("Median",median(pts$price),median(pts$sqfeet),median(pts$YearBuilt),median(pts$year),median(pts$LotSizeSquareFeet),
+           median(pcs$price),median(pcs$sqfeet),median(pcs$YearBuilt),median(pcs$year),median(pcs$LotSizeSquareFeet),
+           median(ats$price),median(ats$sqfeet),median(ats$YearBuilt),median(ats$year),median(ats$LotSizeSquareFeet),
+           median(acs$price),median(acs$sqfeet),median(acs$YearBuilt),median(acs$year),median(acs$LotSizeSquareFeet))
+summean<-rbind("Mean",mean(pts$price),mean(pts$sqfeet),mean(pts$YearBuilt),mean(pts$year),mean(pts$LotSizeSquareFeet),
+            mean(pcs$price),mean(pcs$sqfeet),mean(pcs$YearBuilt),mean(pcs$year),mean(pcs$LotSizeSquareFeet),
+            mean(ats$price),mean(ats$sqfeet),mean(ats$YearBuilt),mean(ats$year),mean(ats$LotSizeSquareFeet),
+            mean(acs$price),mean(acs$sqfeet),mean(acs$YearBuilt),mean(acs$year),mean(acs$LotSizeSquareFeet))
+sum75<-rbind("75th percentile",quantile(pts$price)[4],quantile(pts$sqfeet)[4],quantile(pts$YearBuilt)[4],quantile(pts$year)[4],quantile(pts$LotSizeSquareFeet)[4],
+           quantile(pcs$price)[4],quantile(pcs$sqfeet)[4],quantile(pcs$YearBuilt)[4],quantile(pcs$year)[4],quantile(pcs$LotSizeSquareFeet)[4],
+           quantile(ats$price)[4],quantile(ats$sqfeet)[4],quantile(ats$YearBuilt)[4],quantile(ats$year)[4],quantile(ats$LotSizeSquareFeet)[4],
+           quantile(acs$price)[4],quantile(acs$sqfeet)[4],quantile(acs$YearBuilt)[4],quantile(acs$year)[4],quantile(acs$LotSizeSquareFeet)[4])
+#rlab<-rbind("     ","Price","Square Feet","Year Built","Year","Lot Size","Price","Square Feet","Year Built","Year","Full Bathroom","Lot Size")
+#rlab2<-rbind("     ","Treatment","Group","  ","   ","  ","   ","Control","Group","  ","   ","  ","   ")
+
+sumtab1<-cbind(sum25,summed,summean,sum75)
+
 
 #sample$date<-sample$date.x
 
@@ -651,118 +857,77 @@ treatl<-c('TATE','MUATE','WLATE')
 #for(buf in 1:2){
 
 
-
+specl<-c("i","a","s","y","")
 #matrices
 
-for(i in c("lm","gam","sp")){
+for(i in c("lm","gam","sp","match")){
   for(j in c("t","wl","mu")){
     for(k in c("did")){
       for(treat in treatl){
-        assign(paste0('betas.',i,'.',j,'.',k,'.',treat.i),matrix(ncol = length(dist),nrow=quant))
-        assign(paste0('ses.',i,'.',j,'.',k,'.',treat.i),matrix(ncol = length(dist),nrow=quant))
-        assign(paste0('ps.',i,'.',j,'.',k,'.',treat.i),matrix(ncol = length(dist),nrow=quant))
-        assign(paste0('betas.',i,'.',j,'.',k,'.',treat.a),matrix(ncol = length(dist),nrow=quant))
-        assign(paste0('ses.',i,'.',j,'.',k,'.',treat.a),matrix(ncol = length(dist),nrow=quant))
-        assign(paste0('ps.',i,'.',j,'.',k,'.',treat.a),matrix(ncol = length(dist),nrow=quant))
-        assign(paste0('betas.',i,'.',j,'.',k,'.',treat.s),matrix(ncol = length(dist),nrow=quant))
-        assign(paste0('ses.',i,'.',j,'.',k,'.',treat.s),matrix(ncol = length(dist),nrow=quant))
-        assign(paste0('ps.',i,'.',j,'.',k,'.',treat.s),matrix(ncol = length(dist),nrow=quant))
-        assign(paste0('betas.',i,'.',j,'.',k,'.',treat.y),matrix(ncol = length(dist),nrow=quant))
-        assign(paste0('ses.',i,'.',j,'.',k,'.',treat.y),matrix(ncol = length(dist),nrow=quant))
-        assign(paste0('ps.',i,'.',j,'.',k,'.',treat.y),matrix(ncol = length(dist),nrow=quant))
-        
+        for(spec in specl){
+        assign(paste0('betas.',i,'.',j,'.',k,'.',treat,'.',spec),matrix(ncol = length(dist),nrow=quant))
+        assign(paste0('ses.',i,'.',j,'.',k,'.',treat,'.',spec),matrix(ncol = length(dist),nrow=quant))
+        assign(paste0('ps.',i,'.',j,'.',k,'.',treat,'.',spec),matrix(ncol = length(dist),nrow=quant))
+          
         assign(paste0('betas.',i,'.',k),matrix(ncol = length(dist),nrow=length(treatl)))
         assign(paste0('ses.',i,'.',k),matrix(ncol = length(dist),nrow=length(treatl)))
         assign(paste0('ps.',i,'.',k),matrix(ncol = length(dist),nrow=length(treatl)))
         
-        
+        }
       }
     }
   }
 }
 di<-3
 treat<-1
+#psite<-21
 
 for(treat in  1:length(treatl)){
   
   treatc<-treatl[[treat]]
   #for(ll in 1:length(laglead)){
   for(di in 1:length(dist)){
+    for(match in c("","match")){
+      #match<-""
+    
     dic<-dist[[di]]
     ll<-1
     llc<-laglead[[ll]]
     sample<-samplefull[samplefull[[paste0('dist',dic)]]>0,]
+    sample<-sample[presstatusd==0,]
+    
+    if(match=="match"){
+      #LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + sqfeet+day+prediffdate+predate
+      samplem<-sample[,c("TransId","date","treatmentgroup","LotSizeSquareFeet", "sqfeet","YearBuilt", "FullBath","day","predate")]
+      mdm<- matchit(treatmentgroup~LotSizeSquareFeet+ YearBuilt + FullBath +sqfeet+day+predate,data=samplem, method = "nearest", distance = "mahalanobis")
+      
+      mdm.treat <- match.data(mdm, group = "treat")
+      mdm.control <- match.data(mdm, group = "control")
+      mdm<-rbind(mdm.treat,mdm.control)
+      mdm<-mdm[,c("TransId","date")]
+      
+      mdm.full<-merge(mdm,sample,all.x = TRUE, by = "TransId")
+      sample<-mdm.full
+    }
+    
     #sample$treatst<-sample$treatst-sample$presstatusd
     #sample<-sample[treatst>0,]
-    sample<-sample[presstatusd==0,]
+    
     # sample$logprice<-sample$logprice.x
     if(treatc=='TATE'){
       #Total Average Treatment Effect
-      timefe<-dplyr::select(sample, starts_with('timefe'))
-      treatgroupm<-dplyr::select(sample, starts_with('treatmentgroup'))
-      year<-dplyr::select(sample, starts_with('year'))
-      bin<-dplyr::select(sample, starts_with('bin'))
-      sample$demlogprice<-demeanlist(sample$logprice,
-                                     list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
-      sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
       
-      #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
-      #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
-      sample$treatControlsComplete<-sample[[paste0('treatControlsComplete',psite)]]
-      sample$timefed<-sample[[paste0('timefed',psite)]]
-      sample$timefedControlsComplete<-sample[[paste0('timefedControlsComplete',psite)]]
-      sample$treatexCC<-ifelse(sample$treatControlsComplete==1 &sample$treatst==0,1,0)
     }
     if(treatc=='MUATE'){
       #Municipal ATE
-      sample$treatdgwMU<- sample[[paste0('treatd',llc,'gw',psite)]]* sample$WaterStndCode.fMU
-      sample$treatgroupMU<-sample$treatmentgroup * sample$WaterStndCode.fMU
-      sample$controlMU<-sample$control*sample$WaterStndCode.fMU
-      
-      sample$sample.MUATE<-sample$control+sample$treatgroupMU
       
       sample<-subset(sample, sample.MUATE==1)
-      timefe<-dplyr::select(sample, starts_with('timefe'))
-      treatgroupm<-dplyr::select(sample, starts_with('treatmentgroup'))
-      year<-dplyr::select(sample, starts_with('year'))
-      bin<-dplyr::select(sample, starts_with('bin'))
-      sample$demlogprice<-demeanlist(sample$logprice,
-                                     list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
-      sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
-      
-      #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
-      #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
-      sample$treatControlsComplete<-sample[[paste0('treatControlsComplete',psite)]]
-      sample$timefed<-sample[[paste0('timefed',psite)]]
-      sample$timefedControlsComplete<-sample[[paste0('timefedControlsComplete',psite)]]
-      #sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
-      sample$treatexCC<-ifelse(sample$treatControlsComplete==1 &sample$treatst==0,1,0)
-    }
+       }
     if(treatc=='WLATE'){
       #Municipal ATE
-      sample$treatdgwWL<- sample[[paste0('treatd',llc,'gw',psite)]]* sample$WaterStndCode.fWL
-      sample$treatgroupWL<-sample$treatmentgroup * sample$WaterStndCode.fWL
-      sample$controlWL<-sample$control*sample$WaterStndCode.fWL
-      
-      sample$sample.WLATE<-sample$control+sample$treatgroupWL
-      
+     
       sample<-subset(sample, sample.WLATE==1)
-      timefe<-dplyr::select(sample, starts_with('timefe'))
-      treatgroupm<-dplyr::select(sample, starts_with('treatmentgroup'))
-      year<-dplyr::select(sample, starts_with('year'))
-      bin<-dplyr::select(sample, starts_with('bin'))
-      sample$demlogprice<-demeanlist(sample$logprice,
-                                     list(as.factor(sample$PropertyAddressCensusTractAndBlock)))
-      sample$aftpropnpl<-sample[[paste0('aftpropnpl',psite)]]
-      
-      #sample$aftfinalnpl<-sample[[paste0('aftfinalnpl',fnplsite)]]
-      #sample$timefinalnplfe<-sample[[paste0('timefinalnplfe',fnplsite)]]
-      sample$treatControlsComplete<-sample[[paste0('treatControlsComplete',psite)]]
-      sample$timefed<-sample[[paste0('timefed',psite)]]
-      sample$timefedControlsComplete<-sample[[paste0('timefedControlsComplete',psite)]]
-      #sample$treatst<-sample[[paste0('treatd',llc,'gw',psite)]] #*sample[[paste0('dist',dist[[5]])]]
-      sample$treatexCC<-ifelse(sample$treatControlsComplete==1 &sample$treatst==0,1,0)
-    }
+      }
     
     if(mean(sample$treatst)>0){
       
@@ -776,6 +941,10 @@ for(treat in  1:length(treatl)){
       spint<-model.matrix(~splat:splong)
       
       spTATE<-cbind(splat,splong,spint,lat,long)
+      
+      #Wst<-readRDS(paste0(path,"Wmat",treatc,dic,".rds"), refhook = NULL)
+      #sample$wlp<-Wst%*%sample$prelogprice
+      #sample$wp<-Wst%*%sample$preprice
       
       sample$preyear<-as.numeric(format(as.Date(sample$predate),"%Y"))
       sample$premonth<-as.numeric(format(as.Date(sample$predate),"%m"))
@@ -792,21 +961,17 @@ for(treat in  1:length(treatl)){
       sample$prequarter<-ifelse(sample$premonth==7|sample$premonth==8|sample$premonth==9,3,sample$prequarter)
       sample$prequarter<-ifelse(sample$premonth==10|sample$premonth==11|sample$premonth==12,4,sample$prequarter)
       
-      xTATE<-model.matrix(~ LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                            sqfeet+day+prediffdate+predate+prelogprice+
-                            as.factor(year)+as.factor(preyear)+
-                            as.factor(month)+as.factor(premonth)-1,sample)
-      xcTATE<-model.matrix(~(data.matrix(bin)+
-                               poly(LotSizeSquareFeet,4) + poly(YearBuilt,4) +   
-                               poly(sqfeet,4))^3-1,sample)
+      
+      sample$prelogpricewlag<-sample$lnlagu20l0sp10c30tp10
       
       sample$tprelprice<-sample$prelogprice*ifelse(sample$treatst==1 & sample$presstatusd==0,1,0)
       sample$treatfin<-ifelse(sample$treatst==1 & sample$presstatusd==0,1,0)
       indx<- factor(as.numeric(cut2(sample$preprice,cuts=qcut,minmax=TRUE)))
-      indx<-ifelse(as.numeric(indx)!=as.numeric(levels(indx)[1])&
-                     as.numeric(indx)!=as.numeric(levels(indx)[length(levels(indx))]),"med",indx)
-      indx<-ifelse(indx==1,"bottom",indx)
-      indx<-ifelse(indx==quant,"top",indx)
+      indx2<- factor(as.numeric(cut2(sample$prelogpricewlag,cuts=qcut,minmax=TRUE)))
+      #indx<-ifelse(as.numeric(indx)!=as.numeric(levels(indx)[1])&
+        #             as.numeric(indx)!=as.numeric(levels(indx)[length(levels(indx))]),"med",indx)
+      #indx<-ifelse(indx==1,"bottom",indx)
+      #indx<-ifelse(indx==quant,"top",indx)
       
       treatind<-model.matrix(~treatst:indx-1,sample)
       treatind<-treatind[,1:(length(unique(indx)))]
@@ -820,24 +985,76 @@ for(treat in  1:length(treatl)){
                         #as.factor(floor(timetotreat))+
                         -1,sample)
       
-      
       qr.X <- qr(X, tol=1e-3, LAPACK = FALSE)
       (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
       (keep <- qr.X$pivot[seq_len(rnkX)])
       ## 1 2 4 5 
       X <- X[,keep]
       
+      
+      Xlag<-model.matrix(~ treatmentgroup:as.factor(lsite)+indx:treatmentgroup:as.factor(lsite)+#:indx+#bs(timetotreat,5)+bs(day,5)+#as.factor(round(timetotreat,1))+
+                        #poly(timetotreat,3)+poly(day,3)+
+                        #treatmentgroup*timetotreat+#treatmentgroup*day+
+                        LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
+                        sqfeet+ prediffdate+predate+prelogprice+ prelogpricewlag+ #indx2+
+                        indx+#presstatusd+
+                        #as.factor(floor(timetotreat))+
+                        -1,sample)
+      
+      
+      qr.Xlag <- qr(Xlag, tol=1e-3, LAPACK = FALSE)
+      (rnkXlag <- qr.Xlag$rank)  ## 4 (number of non-collinear columns)
+      (keeplag <- qr.Xlag$pivot[seq_len(rnkXlag)])
+      ## 1 2 4 5 
+      Xlag <- Xlag[,keeplag]
+      
       results.lm.t.did.i<-felm(logprice ~treatind+
                                  X|as.factor(PropertyAddressCensusTractAndBlock)+
                                  as.factor(year):as.factor(quarter)+
-                                 as.factor(preyear):as.factor(prequarter)| 0 | lsite,sample) #as.factor(HHID)+
+                                 as.factor(preyear):as.factor(prequarter)| 0 | PropertyAddressCensusTractAndBlock:year,sample) #as.factor(HHID)+
       summary(results.lm.t.did.i)
       
       results.lm.t.did.a<-felm(logprice ~treatind+
                                  X|as.factor(PropertyAddressCensusTractAndBlock)+
-                                 as.factor(year)+as.factor(preyear)| 0 | lsite,sample) #as.factor(HHID)+
+                                 as.factor(year):as.factor(quarter)+
+                                 as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
       summary(results.lm.t.did.a)
       
+      results.lm.t.did.s<-felm(logprice ~treatind+X|as.factor(lsite)+
+                                 as.factor(year):as.factor(quarter)+
+                                 as.factor(preyear):as.factor(prequarter)| 0 | PropertyAddressCensusTractAndBlock:year,sample) #as.factor(HHID)+
+      summary(results.lm.t.did.s)
+      
+      results.lm.t.did.y<-felm(logprice ~treatind+X|as.factor(lsite)+
+                                 as.factor(year):as.factor(quarter)+
+                                 as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
+      summary(results.lm.t.did.y)
+     
+       
+      #################################
+      #Spatial
+      
+      results.lm.t.did.i.x2<-felm(logprice ~treatind+
+                                Xlag|as.factor(PropertyAddressCensusTractAndBlock)+
+                                 as.factor(year):as.factor(quarter)+
+                                 as.factor(preyear):as.factor(prequarter)| 0 | PropertyAddressCensusTractAndBlock:year,sample) #as.factor(HHID)+
+      summary(results.lm.t.did.i.x2)
+      
+      results.lm.t.did.a.x2<-felm(logprice ~treatind+
+                                 Xlag|as.factor(PropertyAddressCensusTractAndBlock)+
+                                 as.factor(year):as.factor(quarter)+
+                                 as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
+      summary(results.lm.t.did.a.x2)
+      
+      results.lm.t.did.s.x2<-felm(logprice ~treatind+Xlag|as.factor(lsite)+
+                                 as.factor(year):as.factor(quarter)+
+                                 as.factor(preyear):as.factor(prequarter)| 0 | PropertyAddressCensusTractAndBlock:year,sample) #as.factor(HHID)+
+      summary(results.lm.t.did.s.x2)
+      
+      results.lm.t.did.y.x2<-felm(logprice ~treatind+Xlag|as.factor(lsite)+
+                                 as.factor(year):as.factor(quarter)+
+                                 as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
+      summary(results.lm.t.did.y.x2)
       
       #results.lm.t.did.z<-felm(logprice ~treatind+X|as.factor(PropertyZip)+as.factor(year):as.factor(quarter)+
       #                           as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
@@ -846,13 +1063,7 @@ for(treat in  1:length(treatl)){
       #results.lm.t.did.c<-felm(logprice ~treatind+X|as.factor(PropertyCity)| 0 | lsite:year,sample) #as.factor(HHID)+
       #summary(results.lm.t.did.c)
       
-      results.lm.t.did.s<-felm(logprice ~treatind+X|as.factor(lsite)+
-                                 as.factor(year):as.factor(quarter)+
-                                 as.factor(preyear):as.factor(prequarter)| 0 | lsite,sample) #as.factor(HHID)+
-      summary(results.lm.t.did.s)
       
-      results.lm.t.did.y<-felm(logprice ~treatind+X|as.factor(lsite)+ as.factor(year)+as.factor(preyear)| 0 | lsite,sample) #as.factor(HHID)+
-      summary(results.lm.t.did.y)
       
       Xg<-model.matrix(~ treatmentgroup+#:indx+#bs(timetotreat,5)+bs(day,5)+#as.factor(round(timetotreat,1))+
                          #poly(timetotreat,3)+poly(day,3)+
@@ -883,34 +1094,42 @@ for(treat in  1:length(treatl)){
       ggplot() +
         geom_point(data=subset(treatment,treatmentgroup==1), aes(x=timetotreat, y=crdid, color= "Treatment Group")) +
         geom_point(data=subset(treatment,treatmentgroup==0), aes(x=timetotreat, y=crdid, color= "Control Group")) +
-        stat_smooth(method = 'loess', formula = y ~ x  ,data=subset(sample,treatmentgroup==1&post==1),se= FALSE,  aes(x=timetotreat, y=crdid),color= "blue") +
-        stat_smooth(method = 'loess', formula = y ~ x  ,data=subset(sample,treatmentgroup==1&post==0),se= FALSE,  aes(x=timetotreat, y=crdid),color= "blue") +
+        stat_smooth(method = 'loess', formula = y ~ x  ,data=subset(sample,treatmentgroup==1&post==1),se= TRUE,  aes(x=timetotreat, y=crdid),color= "blue") +
+        stat_smooth(method = 'loess', formula = y ~ x  ,data=subset(sample,treatmentgroup==1&post==0),se= TRUE,  aes(x=timetotreat, y=crdid),color= "blue") +
         
-        stat_smooth(method = 'loess', formula = y ~ x  ,data=subset(sample,treatmentgroup==0&post==1),se= FALSE,  aes(x=timetotreat, y=crdid),color= "red") +
-        stat_smooth(method = 'loess', formula = y ~ x  ,data=subset(sample,treatmentgroup==0&post==0),se= FALSE,  aes(x=timetotreat, y=crdid),color= "red") +
+        stat_smooth(method = 'loess', formula = y ~ x  ,data=subset(sample,treatmentgroup==0&post==1),se= TRUE,  aes(x=timetotreat, y=crdid),color= "red") +
+        stat_smooth(method = 'loess', formula = y ~ x  ,data=subset(sample,treatmentgroup==0&post==0),se= TRUE,  aes(x=timetotreat, y=crdid),color= "red") +
         ggtitle("Common Trends Assumption")+
         xlab('Years from Deletion') + labs(color="Legend") +  geom_vline(xintercept=0)+
         ylab('Monthly Average Residuals')
       
+      if(match==""){
       ggsave(file=paste(path,'latex/','lmdidavg',treatc,dic, '.png', sep=""),height = 6,width =10)
-      
-      results.lm.t.did.agg<-felm(logprice ~treatst+X|as.factor(PropertyAddressCensusTractAndBlock)+
-                                   as.factor(year):as.factor(quarter)+
-                                   as.factor(preyear):as.factor(prequarter),sample) #as.factor(HHID)+
+      }
+      results.lm.t.did.agg<-felm(logprice ~treatst+Xg|
+                                   as.factor(PropertyAddressCensusTractAndBlock),sample) #as.factor(HHID)+
       summary(results.lm.t.did.agg)
-      
+      if(match==""){
       betas.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Estimate"][1])
       ses.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Std. Error"][1])
       ps.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Pr(>|t|)"][1])
-      
-      results.gam<-mgcv::gam(logprice~treatst+X+#s(prelogprice,bs="cr")+
-                               s(day,bs="gp")+s(lat,long,bs="tp",m=3,k=300),data=sample)
+      }
+      if(match=="match"){
+        betas.match.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Estimate"][1])
+        ses.match.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Std. Error"][1])
+        ps.match.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Pr(>|t|)"][1])
+      }
+      if(match==""){
+      results.gam<-mgcv::gam(logprice~treatst+Xg+#s(prelogprice,bs="cr")+
+                               #as.factor(year):as.factor(quarter)+
+                               #as.factor(preyear):as.factor(prequarter)+
+                               as.factor(lsite)+s(lat,long,bs="tp",m=3,k=300),data=sample)
       gam.model.t<-mgcv::summary.gam(results.gam)   
       
       betas.gam.did[treat,di]<-as.numeric(gam.model.t$p.table[,"Estimate"])[2]
       ses.gam.did[treat,di]<-as.numeric(gam.model.t$p.table[,"Std. Error"])[2]
       ps.gam.did[treat,di]<-as.numeric(gam.model.t$p.table[,"Pr(>|t|)"])[2]
-      
+      }
       
       
       
@@ -922,12 +1141,18 @@ for(treat in  1:length(treatl)){
       #summary(results.semip)
       #library(gam)
       library(mgcv)
+      if(match==""){
       s=mgcv:::s
-      results.gam<-mgcv::gam(logprice~treatind+X+#s(prelogprice,bs="cr")+
+      intsp<-model.matrix(~as.factor(sample$lsite):lat+as.factor(sample$lsite):long-1)
+      #s1<-sample[lsite!=19,]
+      #X1<-X[sample$lsite!=19,]
+      #treatind1<-treatind[sample$lsite!=19,]
+      results.gam<-mgcv::gam(logprice~treatind+X+#s(prelogprice,bs="cr")+as.factor(lsite):
                                #s(day,bs="cr")+s(predate,bs="cr")+
                                as.factor(year):as.factor(quarter)+
-                               as.factor(preyear):as.factor(prequarter)+as.factor(lsite)+
-                               s(lat,long,bs="tp",m=3,k=300),data=sample)
+                               as.factor(preyear):as.factor(prequarter)+
+                               as.factor(lsite)+
+                               s(PropertyAddressLatitude,PropertyAddressLongitude,bs="tp",m=3,k=300),data=sample)
       gam.model<-mgcv::summary.gam(results.gam)  
       mgcv::summary.gam(results.gam)  
       #results.gam<-mgcv::gam(logprice~treatind+X+#s(prelogprice,bs="cr")+
@@ -936,7 +1161,7 @@ for(treat in  1:length(treatl)){
       #s(lat,long,bs="ts",m=3,k=500),data=sample)
       #mgcv::summary.gam(results.gam) 
       
-      
+      }
       if(FALSE){
         
         
@@ -1025,28 +1250,28 @@ for(treat in  1:length(treatl)){
         # effects.finalb.lag.2sls.robust2<- impacts(results.stsls, listw= Wst, R=100)
         #summary(effects.finalb.lag.2sls.robust2, zstats=TRUE, short=TRUE)
       }
-      
+      if(match=="nomatch"){
       if(treatc=="TATE"){
         betas.lm.t.did.TATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Estimate"][1:quant])
         betas.lm.t.did.TATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Estimate"][1:quant])
         betas.lm.t.did.TATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Estimate"][1:quant])
         betas.lm.t.did.TATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Estimate"][1:quant])
         
-        betas.gam.t.did.TATE[,di]<-as.numeric(gam.model$p.table[,"Estimate"])[2:(1+quant)]
+        betas.gam.t.did.TATE.[,di]<-as.numeric(gam.model$p.table[,"Estimate"])[2:(quant+1)]
         #betas.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][1:quant])
-        ses.lm.t.did.TATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Std. Error"][1:quant])
-        ses.lm.t.did.TATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Std. Error"][1:quant])
-        ses.lm.t.did.TATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Std. Error"][1:quant])
-        ses.lm.t.did.TATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Std. Error"][1:quant])
+        ses.lm.t.did.TATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Cluster s.e."][1:quant])
+        ses.lm.t.did.TATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Cluster s.e."][1:quant])
+        ses.lm.t.did.TATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Cluster s.e."][1:quant])
+        ses.lm.t.did.TATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Cluster s.e."][1:quant])
         
-        ses.gam.t.did.TATE[,di]<-as.numeric(gam.model$p.table[,"Std. Error"])[2:(1+quant)]
+        ses.gam.t.did.TATE.[,di]<-as.numeric(gam.model$p.table[,"Std. Error"])[2:(quant+1)]
         #ses.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][1:quant])
         ps.lm.t.did.TATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.TATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.TATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.TATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Pr(>|t|)"][1:quant])
         
-        ps.gam.t.did.TATE[,di]<-as.numeric(gam.model$p.table[,"Pr(>|t|)"])[2:(1+quant)]
+        ps.gam.t.did.TATE.[,di]<-as.numeric(gam.model$p.table[,"Pr(>|t|)"])[2:(quant+1)]
         #ps.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][1:quant])
       }
       
@@ -1056,21 +1281,21 @@ for(treat in  1:length(treatl)){
         betas.lm.t.did.MUATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Estimate"][1:quant])
         betas.lm.t.did.MUATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Estimate"][1:quant])
         
-        betas.gam.t.did.MUATE[,di]<-as.numeric(gam.model$p.table[,"Estimate"])[2:(1+quant)]
+        betas.gam.t.did.MUATE.[,di]<-as.numeric(gam.model$p.table[,"Estimate"])[2:(quant+1)]
         #betas.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][1:quant])
-        ses.lm.t.did.MUATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Std. Error"][1:quant])
-        ses.lm.t.did.MUATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Std. Error"][1:quant])
-        ses.lm.t.did.MUATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Std. Error"][1:quant])
-        ses.lm.t.did.MUATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Std. Error"][1:quant])
+        ses.lm.t.did.MUATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Cluster s.e."][1:quant])
+        ses.lm.t.did.MUATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Cluster s.e."][1:quant])
+        ses.lm.t.did.MUATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Cluster s.e."][1:quant])
+        ses.lm.t.did.MUATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Cluster s.e."][1:quant])
         
-        ses.gam.t.did.MUATE[,di]<-as.numeric(gam.model$p.table[,"Std. Error"])[2:(1+quant)]
+        ses.gam.t.did.MUATE.[,di]<-as.numeric(gam.model$p.table[,"Std. Error"])[2:(quant+1)]
         #ses.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][1:quant])
         ps.lm.t.did.MUATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.MUATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.MUATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.MUATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Pr(>|t|)"][1:quant])
         
-        ps.gam.t.did.MUATE[,di]<-as.numeric(gam.model$p.table[,"Pr(>|t|)"])[2:(1+quant)]
+        ps.gam.t.did.MUATE.[,di]<-as.numeric(gam.model$p.table[,"Pr(>|t|)"])[2:(quant+1)]
         #ps.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][1:quant])
       }
       
@@ -1080,22 +1305,96 @@ for(treat in  1:length(treatl)){
         betas.lm.t.did.WLATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Estimate"][1:quant])
         betas.lm.t.did.WLATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Estimate"][1:quant])
         
-        betas.gam.t.did.WLATE[,di]<-as.numeric(gam.model$p.table[,"Estimate"])[2:(1+quant)]
+        betas.gam.t.did.WLATE.[,di]<-as.numeric(gam.model$p.table[,"Estimate"])[2:(quant+1)]
         #betas.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][1:quant])
-        ses.lm.t.did.WLATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Std. Error"][1:quant])
-        ses.lm.t.did.WLATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Std. Error"][1:quant])
-        ses.lm.t.did.WLATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Std. Error"][1:quant])
-        ses.lm.t.did.WLATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Std. Error"][1:quant])
+        ses.lm.t.did.WLATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Cluster s.e."][1:quant])
+        ses.lm.t.did.WLATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Cluster s.e."][1:quant])
+        ses.lm.t.did.WLATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Cluster s.e."][1:quant])
+        ses.lm.t.did.WLATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Cluster s.e."][1:quant])
         
-        ses.gam.t.did.WLATE[,di]<-as.numeric(gam.model$p.table[,"Std. Error"])[2:(1+quant)]
+        ses.gam.t.did.WLATE.[,di]<-as.numeric(gam.model$p.table[,"Std. Error"])[2:(quant+1)]
         #ses.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][1:quant])
         ps.lm.t.did.WLATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.WLATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.WLATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.WLATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Pr(>|t|)"][1:quant])
         
-        ps.gam.t.did.WLATE[,di]<-as.numeric(gam.model$p.table[,"Pr(>|t|)"])[2:(1+quant)]
+        ps.gam.t.did.WLATE.[,di]<-as.numeric(gam.model$p.table[,"Pr(>|t|)"])[2:(quant+1)]
         #ps.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][1:quant])
+      }
+      }
+      if(match=="match"){
+        if(treatc=="TATE"){
+          betas.match.t.did.TATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Estimate"][1:quant])
+          betas.match.t.did.TATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Estimate"][1:quant])
+          betas.match.t.did.TATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Estimate"][1:quant])
+          betas.match.t.did.TATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Estimate"][1:quant])
+          
+          #betas.gam.t.did.TATE.[,di]<-as.numeric(gam.model$p.table[,"Estimate"])[2:(quant+1)]
+          #betas.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][1:quant])
+          ses.match.t.did.TATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Cluster s.e."][1:quant])
+          ses.match.t.did.TATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Cluster s.e."][1:quant])
+          ses.match.t.did.TATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Cluster s.e."][1:quant])
+          ses.match.t.did.TATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Cluster s.e."][1:quant])
+          
+          #ses.gam.t.did.TATE.[,di]<-as.numeric(gam.model$p.table[,"Std. Error"])[2:(quant+1)]
+          #ses.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][1:quant])
+          ps.match.t.did.TATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Pr(>|t|)"][1:quant])
+          ps.match.t.did.TATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Pr(>|t|)"][1:quant])
+          ps.match.t.did.TATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Pr(>|t|)"][1:quant])
+          ps.match.t.did.TATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Pr(>|t|)"][1:quant])
+          
+          #ps.gam.t.did.TATE.[,di]<-as.numeric(gam.model$p.table[,"Pr(>|t|)"])[2:(quant+1)]
+          #ps.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][1:quant])
+        }
+        
+        if(treatc=="MUATE"){
+          betas.match.t.did.MUATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Estimate"][1:quant])
+          betas.match.t.did.MUATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Estimate"][1:quant])
+          betas.match.t.did.MUATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Estimate"][1:quant])
+          betas.match.t.did.MUATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Estimate"][1:quant])
+          
+          #betas.gam.t.did.MUATE.[,di]<-as.numeric(gam.model$p.table[,"Estimate"])[2:(quant+1)]
+          #betas.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][1:quant])
+          ses.match.t.did.MUATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Cluster s.e."][1:quant])
+          ses.match.t.did.MUATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Cluster s.e."][1:quant])
+          ses.match.t.did.MUATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Cluster s.e."][1:quant])
+          ses.match.t.did.MUATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Cluster s.e."][1:quant])
+          
+          #ses.gam.t.did.MUATE.[,di]<-as.numeric(gam.model$p.table[,"Std. Error"])[2:(quant+1)]
+          #ses.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][1:quant])
+          ps.match.t.did.MUATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Pr(>|t|)"][1:quant])
+          ps.match.t.did.MUATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Pr(>|t|)"][1:quant])
+          ps.match.t.did.MUATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Pr(>|t|)"][1:quant])
+          ps.match.t.did.MUATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Pr(>|t|)"][1:quant])
+          
+          #ps.gam.t.did.MUATE.[,di]<-as.numeric(gam.model$p.table[,"Pr(>|t|)"])[2:(quant+1)]
+          #ps.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][1:quant])
+        }
+        
+        if(treatc=="WLATE"){
+          betas.match.t.did.WLATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Estimate"][1:quant])
+          betas.match.t.did.WLATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Estimate"][1:quant])
+          betas.match.t.did.WLATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Estimate"][1:quant])
+          betas.match.t.did.WLATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Estimate"][1:quant])
+          
+          #betas.gam.t.did.WLATE.[,di]<-as.numeric(gam.model$p.table[,"Estimate"])[2:(quant+1)]
+          #betas.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][1:quant])
+          ses.match.t.did.WLATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Cluster s.e."][1:quant])
+          ses.match.t.did.WLATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Cluster s.e."][1:quant])
+          ses.match.t.did.WLATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Cluster s.e."][1:quant])
+          ses.match.t.did.WLATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Cluster s.e."][1:quant])
+          
+          #ses.gam.t.did.WLATE.[,di]<-as.numeric(gam.model$p.table[,"Std. Error"])[2:(quant+1)]
+          #ses.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][1:quant])
+          ps.match.t.did.WLATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Pr(>|t|)"][1:quant])
+          ps.match.t.did.WLATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Pr(>|t|)"][1:quant])
+          ps.match.t.did.WLATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Pr(>|t|)"][1:quant])
+          ps.match.t.did.WLATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Pr(>|t|)"][1:quant])
+          
+          #ps.gam.t.did.WLATE.[,di]<-as.numeric(gam.model$p.table[,"Pr(>|t|)"])[2:(quant+1)]
+          #ps.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][1:quant])
+        }
       }
       #assign(paste0('lm.TATE.',k,i),lm.TATE)
       #summary(results.lm.t.did)
@@ -1218,27 +1517,29 @@ for(treat in  1:length(treatl)){
       
       print(paste0('distance = ',dic))
       print(paste0('treat = ',treatc))
-      print(paste0('site = ',psite))
+    
+    }
     }
   }
 }
 
 for(statchange in c('')){
-  for(meth in c('lm','gam')){
+  for(meth in c('lm','gam','match')){
     for(inf in c('did')){
       for(treat in  treatl){
+        for(spec in specl){
         #treat<-"TATE"
         
-        p<-get(paste0(statchange,'ps.',meth,'.t.',inf,'.',treat))
+        p<-get(paste0(statchange,'ps.',meth,'.t.',inf,'.',treat,'.',spec))
         mystars <- ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "* ", ifelse(p < .1, "^\\bullet  ", " "))))
-        
+        if(!is.na(p[1,1])){
         #pb<-exp(get(paste0(statchange,'betas.',meth,'.t.',inf,'.',treat)))-1
         #rpb<-round(pb,3)
         #se<-round(exp(get(paste0(statchange,'ses.',meth,'.t.',inf,'.',treat)))-1,3)
         
-        pb<-get(paste0(statchange,'betas.',meth,'.t.',inf,'.',treat))
+        pb<-get(paste0(statchange,'betas.',meth,'.t.',inf,'.',treat,'.',spec))
         rpb<-round(pb,3)
-        se<-round(get(paste0(statchange,'ses.',meth,'.t.',inf,'.',treat)),3)
+        se<-round(get(paste0(statchange,'ses.',meth,'.t.',inf,'.',treat,'.',spec)),3)
         
         srpb <- matrix(paste(rpb, mystars, sep=""), ncol=dim(pb)[2] )
         nsrpb<-rbind(c("",laglead),cbind(dist,srpb))
@@ -1266,38 +1567,36 @@ for(statchange in c('')){
         #   paste0(qcut[8],"]"),paste0("(",qcut[8],","),paste0(qcut[9],"]"),paste0("(",qcut[9],","),
         #  paste0(qcut[10],"]"),
         # paste0("(",qcut[10],","),paste0(qcut[11],"]"))
-        rn<-c(paste0("(",qcut[1],",",qcut[2],"]"),"1" ,paste0("(",qcut[2],",",qcut[3],"]"),"2 " ,
-              paste0("(",qcut[3],",",qcut[4],"]"),"3"  ,
-              paste0("(",qcut[4],",",qcut[5],"]"), "4",paste0("(",qcut[5],",",qcut[6],"]"),"5" ,
-              paste0("(",qcut[6],",",qcut[7],"]"),"6" ,paste0("(",qcut[7],",",qcut[8],"]"),"7" , 
-              paste0("(",qcut[8],",",qcut[9],"]"), "8 ",paste0("(",qcut[9],",",qcut[10],"]"), "9",
-              paste0("(",qcut[10],",",qcut[11],"]"), "10")
-        rn2<-c(paste0("(",qcut[1],",",qcut[2],"]"),paste0("(",qcut[2],",",qcut[3],"]"),
-               paste0("(",qcut[3],",",qcut[4],"]"),
-               paste0("(",qcut[4],",",qcut[5],"]"),paste0("(",qcut[5],",",qcut[6],"]"),
-               paste0("(",qcut[6],",",qcut[7],"]"),paste0("(",qcut[7],",",qcut[8],"]"),
-               paste0("(",qcut[8],",",qcut[9],"]"), paste0("(",qcut[9],",",qcut[10],"]"),
-               paste0("(",qcut[10],",",qcut[11],"]"))
-        rownames(results.mat)<-rn
+        rn<-c(paste0("(",qcut[1],",",qcut[2],"]"),"Bottom Ten Percentile" ,
+              paste0("(",qcut[2],",",qcut[quant],"]"),"Middle 80 Percentile" ,
+              paste0("(",qcut[quant],",",qcut[quant+1],"]"), "Top Ten Percentile")
+        rn2<-c(paste0("(",qcut[1],", ",qcut[2],"]")," ",paste0("(",qcut[2],",  ",qcut[3],"]"),"  ",
+               paste0("(",qcut[3],", ",qcut[4],"]"),"   ",
+               paste0("(",qcut[4],",",qcut[5],"]"),"     ",paste0("(",qcut[5],",",qcut[6],"]"),"      ",
+               paste0("(",qcut[6],",",qcut[7],"]"),"       ",paste0("(",qcut[7],",",qcut[8],"]"),"        ",
+               paste0("(",qcut[8],",",qcut[9],"]"),"           ", paste0("(",qcut[9],",",qcut[10],"]"),"        ",
+               paste0("(",qcut[10],",",qcut[11],"]"),"                ")
+        rownames(results.mat)<-rn2
         xtable(results.mat)
         print.xtable(xtable(results.mat),include.rownames=TRUE, 
                      include.colnames=TRUE, sanitize.text.function = identity,
-                     type="latex", file=paste0(path,'latex/',meth,inf,statchange,treat,"buffer",buf,".tex"))
-        
-        allModelFrame <- data.frame(Variable = 1:10,
+                     type="latex", file=paste0(path,'latex/',meth,inf,statchange,treat,spec,"buffer",buf,".tex"))
+        qu<-c("Bottom","Middle","Top")
+        qun<-c(1:10)
+        allModelFrame <- data.frame(Variable = qun,
                                     Coefficient = pb[,1],
                                     SE = se[, 1],
                                     modelName = "10k")
         for(i in 2:length(dist)){
           di<-dist[i]
-          modelFrame <- data.frame(Variable =  1:10,
+          modelFrame <- data.frame(Variable =  qun,
                                    Coefficient = pb[,i],
                                    SE = se[, i],
                                    modelName = di)
           allModelFrame <- data.frame(rbind(allModelFrame,modelFrame))
           
         }
-        qu<-c("1","2","3","4","5","6","7","8","9","10")
+        
         interval2 <- -qnorm((1-0.90)/2)  # 95% multiplier
         leg<-c('10k','8k','6k','4k','2k')
         allModelFrame<-allModelFrame[allModelFrame$modelName!="2k",]
@@ -1315,17 +1614,20 @@ for(statchange in c('')){
         
         #zp1 <- zp1 + geom_line(data = allModelFrame, aes(linetype =modelName ), size = 1) +
         zp1 <- zp1 + ggtitle("Comparing distance cut-offs")+xlab('Quantile')  
-        zp1 <- zp1 + scale_x_continuous(breaks=seq(0,10,1))
+        #zp1 <- zp1 + scale_x_continuous(labels=c("1"="B","2"="M","3"="T"))
+        zp1 <- zp1 + scale_x_continuous(breaks=qun)
         print(zp1)  # The trick to these is position_dodge().
         
-        ggsave(file=paste(path,'latex/','coeff',meth,treat, '.png', sep=""),height = 7,width =9)
+        ggsave(file=paste(path,'latex/','coeff',meth,treat,spec, '.png', sep=""),height = 7,width =9)
+        }
+        }
         
       }
     }
   }
 }
 
-for(meth in c("lm","gam")){
+for(meth in c("lm","gam","match")){
   p<-get(paste0('ps.',meth,'.did'))
   mystars <- ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "* ", ifelse(p < .1, "^\\bullet  ", " "))))
   
@@ -1370,21 +1672,23 @@ for(meth in c("lm","gam")){
   print.xtable(xtable(results.mat),include.rownames=TRUE, 
                include.colnames=TRUE, sanitize.text.function = identity,
                type="latex", file=paste0(path,'latex/ATEcomp',meth,'.tex'))
+  qu<-c("Bottom","Middle","Top")
   if(FALSE){
-    allModelFrame <- data.frame(Variable = 1:10,
+    allModelFrame <- data.frame(Variable = qu,
                                 Coefficient = pb[,1],
                                 SE = se[, 1],
                                 modelName = "10k")
     for(i in 2:length(dist)){
       di<-dist[i]
-      modelFrame <- data.frame(Variable =  1:10,
+      modelFrame <- data.frame(Variable =  qu,
                                Coefficient = pb[,i],
                                SE = se[, i],
                                modelName = di)
       allModelFrame <- data.frame(rbind(allModelFrame,modelFrame))
       
     }
-    qu<-c("1","2","3","4","5","6","7","8","9","10")
+    
+    
     interval2 <- -qnorm((1-0.90)/2)  # 95% multiplier
     leg<-c('10k','8k','6k','4k','2k')
     allModelFrame<-allModelFrame[allModelFrame$modelName!="2k",]
@@ -1402,9 +1706,178 @@ for(meth in c("lm","gam")){
     
     #zp1 <- zp1 + geom_line(data = allModelFrame, aes(linetype =modelName ), size = 1) +
     zp1 <- zp1 + ggtitle("Comparing distance cut-offs")+xlab('Quantile')  
-    zp1 <- zp1 + scale_x_continuous(breaks=seq(0,10,1))
+    #zp1 <- zp1 + scale_x_discrete(breaks=qu)
     print(zp1)  # The trick to these is position_dodge().
     
     ggsave(file=paste(path,'latex/','coeff',meth,treat, '.png', sep=""),height = 7,width =9)
+  }
+}
+
+for(statchange in c('')){
+  for(meth in c('lm',"match")){
+    for(inf in c('did')){
+      for(treat in  treatl){
+        for(di in dist){
+          #treat<-"TATE"
+          #di<-1
+          #meth<-'lm'
+          
+          p1<-get(paste0(statchange,'ps.',meth,'.t.',inf,'.',treat,'.',specl[1]))
+          p2<-get(paste0(statchange,'ps.',meth,'.t.',inf,'.',treat,'.',specl[2]))
+          p3<-get(paste0(statchange,'ps.',meth,'.t.',inf,'.',treat,'.',specl[3]))
+          p4<-get(paste0(statchange,'ps.',meth,'.t.',inf,'.',treat,'.',specl[4]))
+          p<-rbind(p1,p2,p3,p4)
+          mystars <- ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "* ", ifelse(p < .1, "^\\bullet  ", " "))))
+          if(!is.na(p[1,1])){
+            #pb<-exp(get(paste0(statchange,'betas.',meth,'.t.',inf,'.',treat)))-1
+            #rpb<-round(pb,3)
+            #se<-round(exp(get(paste0(statchange,'ses.',meth,'.t.',inf,'.',treat)))-1,3)
+            
+            pb1<-get(paste0(statchange,'betas.',meth,'.t.',inf,'.',treat,'.',specl[1]))
+            pb2<-get(paste0(statchange,'betas.',meth,'.t.',inf,'.',treat,'.',specl[2]))
+            pb3<-get(paste0(statchange,'betas.',meth,'.t.',inf,'.',treat,'.',specl[3]))
+            pb4<-get(paste0(statchange,'betas.',meth,'.t.',inf,'.',treat,'.',specl[4]))
+            pb<-rbind(pb1,pb2,pb3,pb4)
+            
+            pb10k<-cbind(pb[1:10,1],pb[11:20,1],pb[21:30,1],pb[31:40,1])
+            pb8k<-cbind(pb[1:10,2],pb[11:20,2],pb[21:30,2],pb[31:40,2])
+            pb6k<-cbind(pb[1:10,3],pb[11:20,3],pb[21:30,3],pb[31:40,3])
+            pb4k<-cbind(pb[1:10,4],pb[11:20,4],pb[21:30,4],pb[31:40,4])
+            
+            rpb<-round(pb,3)
+            se1<-round(get(paste0(statchange,'ses.',meth,'.t.',inf,'.',treat,'.',specl[1])),3)
+            se2<-round(get(paste0(statchange,'ses.',meth,'.t.',inf,'.',treat,'.',specl[2])),3)
+            se3<-round(get(paste0(statchange,'ses.',meth,'.t.',inf,'.',treat,'.',specl[3])),3)
+            se4<-round(get(paste0(statchange,'ses.',meth,'.t.',inf,'.',treat,'.',specl[4])),3)
+            se<-rbind(se1,se2,se3,se4)
+            
+            se10k<-cbind(se[1:10,1],se[11:20,1],se[21:30,1],se[31:40,1])
+            se8k<-cbind(se[1:10,2],se[11:20,2],se[21:30,2],se[31:40,2])
+            se6k<-cbind(se[1:10,3],se[11:20,3],se[21:30,3],se[31:40,3])
+            se4k<-cbind(se[1:10,4],se[11:20,4],se[21:30,4],se[31:40,4])
+            
+            srpb <- matrix(paste(rpb, mystars, sep=""), ncol=dim(pb)[2] )
+            nsrpb<-rbind(c("",laglead),cbind(dist,srpb))
+            
+            #colnames(srpb)<-laglead
+            #rownames(srpb)<-dist
+            #10k
+            
+            
+            results.mat<-matrix(nrow= 2*dim(srpb)[1],ncol= dim(srpb)[2])
+            
+            for(i in 1:dim(results.mat)[1]){
+              if(i %% 2 != 0){
+                results.mat[i,]<-srpb[ceiling(i/2),]
+                #    rownames(ols.mat)[i]<-rownames(srpb)[ceiling(i/2)]
+              }
+              if(i %% 2 == 0){
+                results.mat[i,]<-paste0('(',se[ceiling(i/2),],')')
+              }
+            }
+            
+            colnames(results.mat)<-c('10k','8k','6k','4k','2k')
+            # rn<-c(paste0("(",qcut[1],","),paste0(qcut[2],"]"),paste0("(",qcut[2],","),paste0(qcut[3],"]"),
+            #      paste0("(",qcut[3],","),paste0(qcut[4],"]"),
+            #     paste0("(",qcut[4],","),paste0(qcut[5],"]"),paste0("(",qcut[5],","),
+            #    paste0(qcut[6],"]"),paste0("(",qcut[6],","),paste0(qcut[7],"]"),paste0("(",qcut[7],","),
+            #   paste0(qcut[8],"]"),paste0("(",qcut[8],","),paste0(qcut[9],"]"),paste0("(",qcut[9],","),
+            #  paste0(qcut[10],"]"),
+            # paste0("(",qcut[10],","),paste0(qcut[11],"]"))
+            
+            results10k<-cbind(results.mat[1:20,1],results.mat[21:40,1],results.mat[41:60,1],results.mat[61:80,1])
+            results8k<-cbind(results.mat[1:20,2],results.mat[21:40,2],results.mat[41:60,2],results.mat[61:80,2])
+            results6k<-cbind(results.mat[1:20,3],results.mat[21:40,3],results.mat[41:60,3],results.mat[61:80,3])
+            results4k<-cbind(results.mat[1:20,4],results.mat[21:40,4],results.mat[41:60,4],results.mat[61:80,4])
+            FEmatrix<- c("Census Tract","Census Tract","Superfund Site","Superfund Site")
+            Cluster<-c("Tract by Year","Site by Year","Tract by Year","Site by Year")
+            rn2<-c(paste0("(",qcut[1],",",qcut[2],"]"),"  ",paste0("(",qcut[2],",",qcut[3],"]"),"    ",
+                   paste0("(",qcut[3],",",qcut[4],"]"),"      ",
+                   paste0("(",qcut[4],",",qcut[5],"]"),"       ",paste0("(",qcut[5],",",qcut[6],"]"),"        ",
+                   paste0("(",qcut[6],",",qcut[7],"]"),"           ",paste0("(",qcut[7],",",qcut[8],"]"),"            ",
+                   paste0("(",qcut[8],",",qcut[9],"]"),"             ", paste0("(",qcut[9],",",qcut[10],"]"),"          ",
+                   paste0("(",qcut[10],",",qcut[11],"]"),"                  ", "Fixed Effects", "Cluster")
+            
+            
+            results10k<-rbind(results10k,FEmatrix,Cluster)
+            results8k<-rbind(results8k,FEmatrix,Cluster)
+            results6k<-rbind(results6k,FEmatrix,Cluster)
+            results4k<-rbind(results4k,FEmatrix,Cluster)
+            
+            rownames(results10k)<-rn2
+            rownames(results8k)<-rn2
+            rownames(results6k)<-rn2
+            rownames(results4k)<-rn2
+            
+            rn<-c(paste0("(",qcut[1],",",qcut[2],"]"),"Bottom Ten Percentile" ,
+                  paste0("(",qcut[2],",",qcut[quant],"]"),"Middle 80 Percentile" ,
+                  paste0("(",qcut[quant],",",qcut[quant+1],"]"), "Top Ten Percentile")
+              
+            xtable(results10k)
+            print.xtable(xtable(results10k),include.rownames=TRUE, 
+                         include.colnames=FALSE, sanitize.text.function = identity,
+                         type="latex", file=paste0(path,'latex/',meth,inf,statchange,treat,"10k.tex"))
+            xtable(results8k)
+            print.xtable(xtable(results8k),include.rownames=TRUE, 
+                         include.colnames=FALSE, sanitize.text.function = identity,
+                         type="latex", file=paste0(path,'latex/',meth,inf,statchange,treat,"8k.tex"))
+            xtable(results6k)
+            print.xtable(xtable(results6k),include.rownames=TRUE, 
+                         include.colnames=FALSE, sanitize.text.function = identity,
+                         type="latex", file=paste0(path,'latex/',meth,inf,statchange,treat,"6k.tex"))
+            xtable(results4k)
+            print.xtable(xtable(results4k),include.rownames=TRUE, 
+                         include.colnames=FALSE, sanitize.text.function = identity,
+                         type="latex", file=paste0(path,'latex/',meth,inf,statchange,treat,"4k.tex"))
+            
+            
+           
+            qu<-c("Bottom","Middle","Top")
+            leg<-c('Tract (Tract by year)','Tract (Site by year)','Site (Tract by year)','Site (Site by year)')
+            qun<-c(1:10)
+            for(j in c("4k","6k","8k","10k")){
+              pb<-get(paste0("pb",j))
+              se<-get(paste0("se",j))
+            allModelFrame <- data.frame(Variable = qun,
+                                        Coefficient = pb[,1],
+                                        SE = se[, 1],
+                                        modelName = 'Tract (Tract by year)')
+            for(i in 2:length(leg)){
+              le<-leg[i]
+              modelFrame <- data.frame(Variable =  qun,
+                                       Coefficient = pb[,i],
+                                       SE = se[, i],
+                                       modelName = le)
+              allModelFrame <- data.frame(rbind(allModelFrame,modelFrame))
+              
+            }
+            
+            interval2 <- -qnorm((1-0.90)/2)  # 95% multiplier
+            allModelFrame<-allModelFrame[allModelFrame$modelName!="2k",]
+            allModelFrame$modelName<-as.factor( allModelFrame$modelName)
+            allModelFrame$modelName<-factor(allModelFrame$modelName,levels(allModelFrame$modelName)[c(2:5,1)])
+            
+            # Plot
+            zp1 <- ggplot(allModelFrame, aes(colour = modelName ))
+            zp1 <- zp1 + geom_hline(yintercept = 0, colour = gray(1/2), lty = 2)
+            zp1 <- zp1 + geom_pointrange(aes(x = Variable, y = Coefficient, ymin = Coefficient - SE*interval2,
+                                             ymax = Coefficient + SE*interval2,color =modelName),
+                                         lwd = 1/2, position = position_dodge(width = 1/2),
+                                         shape = 21, fill = "WHITE")
+            #zp1 <- zp1 + coord_flip() + theme_bw()
+            
+            #zp1 <- zp1 + geom_line(data = allModelFrame, aes(linetype =modelName ), size = 1) +
+            zp1 <- zp1 + ggtitle("Comparing distance cut-offs")+xlab('Quantile')  
+            #zp1 <- zp1 + scale_x_continuous(labels=c("1"="B","2"="M","3"="T"))
+            zp1 <- zp1 + scale_x_continuous(breaks=qun)
+            print(zp1)  # The trick to these is position_dodge().
+            
+            ggsave(file=paste(path,'latex/','coeff',meth,treat,spec,j, 'ols.png', sep=""),height = 7,width =9)
+            }
+            }
+        }
+        
+      }
+    }
   }
 }
