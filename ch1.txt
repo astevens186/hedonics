@@ -1,0 +1,311 @@
+
+
+\documentclass[12pt,reqno]{amsart}
+
+\parindent 0pt
+\setlength{\hoffset}{-0.75in}
+\setlength{\voffset}{-0.75in}
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{9in}
+\setlength{\parskip}{0.5\baselineskip}
+\setlength{\parindent}{.5in}
+\linespread{2}
+\usepackage{cite}
+\usepackage{verbatim}
+\usepackage{graphicx,booktabs}
+\usepackage{rotating}
+\usepackage{pdflscape}
+\usepackage[utf8]{inputenc}
+\usepackage[options]{natbib}
+\usepackage{tikz}
+\usepackage{subfiles}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{blindtext}
+\title{Who Benefits from the Cleanup of Superfund Landfill Sites?\\ 
+Evidence from New York State}
+%\date{2018\\ February}
+\author{Alex Stevens}
+%\\ Agicultural and Consumer Economics, \\
+%University of Illinois at Urbana-Champaign
+
+
+%\graphicspath{{images/}{../images/}}
+\begin{document}
+\maketitle
+
+\section{Introduction}
+Since the U.S. Congress created the Superfund program in 1980, the effects of cleanup of hazardous sites have been contested. Hazardous sites can have a wide variety of environmental and health risks, which can affect consumers' willingness to pay to live farther away from contaminated sites.  \citet{greenstoneg} and \citet{kielzabel} found small and insignificant effects of cleanup of Superfund sites on housing prices. \citet{mastromonaco}, \citet{cameron}, \citet{GamperTimmins}, \citet{kohlhase}, and \citet{greenberg}  found significant effects, statistically and economically, from cleanup on the prices of houses very close to the sites. \citet{kielwilliams} show that there is significant difference between different Superfund sites. Superfund site can have heterogeneous effects on the surrounding population. This paper analyzes the quantiles, water sources, and locations that benefit from the Superfund cleanup.
+
+This paper uses a difference-in-difference approach to find different groups that benefit from Superfund landfill cleanup. The benefits of Superfund landfill cleanup largely go to those with higher value homes and those with well water. These projects are largely financed with state and local property taxes, which are flat taxes within municipalities of New York \citep{DTF}. This paper provides evidence that the cleanup of these sites is regressive. Also, there is an opportunity for land value capture, as states and local governments can tax houses with these identifiable characteristics more than other households to recoup costs of cleanup.
+
+This paper uses a difference-in-difference approach and uses simple methods to satisfy difference-in-difference assumptions. Consumers may be able to anticipate the change in status before the treatment date. I drop observations within one year of the treatment date to limit  the effect of anticipatory behavior on the estimation. It is also possible for houses in the same market to affect each other through spatial equilibrium. When control units are in the same market as treatment units, control units can be indirectly affected by treatment, impairing the model's ability to estimate the counterfactual. This paper uses the method used by \citet{Guignet2013} to create a control group. These steps allow me to be more confident with the difference-in-difference assumptions and the causal interpretation of the coefficients.
+
+Previous uses of difference-in-difference approaches in the hedonics literature have taken different methods of creating control groups. \citet{muehlenbachs} and \citet{currie} use treatment and control groups adjacent to each other. This approach assumes that there are no spatial equilibrium and no spatial spillover in which treatment could affect the control group. However, \citet{tiebout} suggests that people sort based on exogenous changes in from location to location. \citet{spencer} find evidence that of environmentally motivated migration. If treatment motivates home owners to move then the control group cannot be adjacent to the treatment group.
+
+This paper creates a control group similar to \citet{Guignet2013} by exploiting temporal variation in deletion of site from the list. Houses near Superfund sites that are deleted between 1994 and 2016 are placed in the treatment group, while houses near Superfund sites that are not deleted between 1994 and 2016 are placed in the control group. This limits the comparison to houses near Superfund sites as houses not near Superfund sites may be substantially different will not be treated in the near future. There is still a potential for substantial differences between these treatment and control groups. \citet{burda} find that after 1994 Superfund sites in lower income and greater elderly populations had quicker time to deletion. This paper uses pre-treatment lagged housing prices to control for pre-treatment neighborhood quality, matches on observables to limit the effects of covariate imbalance on estimation, and the difference-in-difference method allows for constant differences treatment and control. These methods limit the effects of differences between treatment and controls groups on biasing estimates and impairing causal interpretation of coefficients.
+
+The Superfund receives funds for cleanup from private, federal, state, and local sources. If the EPA can determine a potentially responsible party (PRP), the PRP will pay most of the cleanup costs \citep{gao}. If the PRP cannot be identified or is unable to pay for the costs of cleanup the EPA will pay for most of the cleanup. States are required to pay ten percent of cleanup costs for all sites within their borders. If the site was owned by state or local governments, the state or local governments are required to pay at least 50 percent of the cleanup costs. While the Superfund program is a federal program, state and local governments still fund a substantial proportion of the cleanup costs. 
+
+Many state and local governments rely on property taxes for revenue. While property taxes are generally regarded as regressive, we can also think of property taxes as fee for services of local governments \citep{tax}. This paper finds that the benefits of Superfund site cleanup is large and significant to high value houses and statistically insignificant for low value houses. This suggests that property taxes used to pay for cleanup should be progressive as well. In cases where property taxes are flat, the benefits to cleanup go largely for high value houses, while individuals in low value houses are being overcharged for cleanup.
+
+This paper limits analysis to municipal landfills. These sites will require at least 50 percent state and local government funding and will be similar to sites that will be cleaned using primarily state and local funding in the future. Previous economics literature on Superfund sites has estimated the effects of various stages of Superfund cleanup including proposal, final NPL listing, and construction complete \citep{mastromonaco}. However, this paper considers the perspective of state and local governments deciding how to fund cleanup, which occurs after the proposal and final NPL listing. The only status change considered in the cleanup process will be deletion from the NPL.
+
+This paper differs in methodology from previous studies of Superfund sites in a number of ways. Instead of using median housing price for each census tract as in \citet{greenstoneg}, this paper uses housing transactions data from Zillow. This paper does not compare houses near Superfund sites to houses not near Superfund sites as they may be different populations. This paper uses a pre-treatment lagged prices to control for pre-treatment neighborhood quality. Similar to \citet{bajari} and \citet{mastromonaco}, this method limits the sample to houses sold more than once and controls for time-varying unobservables. 
+
+
+
+
+
+
+    \begin{figure}{\textwidth}
+  \centering
+  \includegraphics[width=1\linewidth]{Superfundprocess.PNG}
+  \caption{Cleanup process}
+  \label{fig:sub1}
+\end{figure}
+
+%Superfund sites have many different vectors of pollution. The different vectors of pollution have heterogenous effects on housing prices in the area.
+
+%Hedonic analysis of Superfund sites has taken two different approaches. \textbf{Cite Lit} estimate average effects of status changes in many different Superfund sites in a geographical region. This approach provides to insight into the overall effectiveness of the Superfund program. \textbf{Cite Lit} analyze individual Superfund sites. This approach allows learn specific effects of each Superfund site. These approaches answer different questions and shed light on different aspects of the Superfund program.
+
+%This paper analyzes the effects of different characteristics of a Superfund site on housing price. First, I disaggregate Superfund sites by vectors of pollution, focusing on air, groundwater, and surface water pollution. Then show that these three vectors have different effects on housing prices. Second, I show that houses that use well water have a larger reaction to Superfund sites that pollute groundwater than houses that use municipal water. Third, I estimate a model that predicts effects of new Superfund site on surrounding housing prices, considering the attributes of the new Superfund site and surrounding housing market. This paper provides evidence that Superfund site attributes have a economically and statistical significant effect on housing prices and provides policy makers a predictive model to estimate the effect of a new Superfund site on surrounding housing prices.
+
+
+
+%This makes use of two machine learning techniques to improve inference. First, Double Selection, developed by \citet{doubleselection}, is used to weaken assumptions made in standard reduced form econometrics. Standard controls are left unpenalized while a large set of transformed variables including binned variables, polynomial, exponential, log, and B-splines are assumed to be sparse and penalized with a robust LASSO, \citet{doubleselection}. Second, the Targeted Learning, developed by \citet{tmle}, is used to estimate the parameter for the effect of new Superfund site on housing prices. Targeted Learning uses an ensemble machine learning technique, Super Learner, developed by \citet{tmle}, to model the effect of control variables on the housing prices, while targeted maximum likelihood estimation \citep{tmle} makes the optimal bias-variance trade off to estimate the parameter of interest. These methods use the machine learning to improve parameter estimation. While not explicitly using the predictions from machine learning algorithms, these methods bring machine learning algoritms' ability to model generalizable complexity to improve parameter estimation.
+
+
+
+%Semiparametric techniques are used following \citet{Grislain-Letremy2014}
+
+\section{data}
+
+This paper uses Zillow assessment and transaction data from New York. while other states may be considered in the future, New York is chosen for two reasons. The \citet{gao} report states ``The state of New York had the largest number of people living within 3 miles of nonfederal NPL sites—an estimated 6 million or about 29 percent of the state’s population." Also, the state has flat property taxes in each municipality \citep{DTF}.
+
+The data used in this paper comes from two datasets. Zillow provides date and price of each transaction and housing characteristics used, including square feet, year built, rooms, and type of water source.
+The data on the Superfund sites comes from the U.S. Environmental Protection Agency \citep{EPA}. The EPA provides the location, dates of status changes, and information about the type of sites. These data sets are provide the information used in this paper.
+
+
+This paper only considers housing transactions of single-family houses between 1994 and 2016, but drops problematic observations. Transactions which are lower than \$10,000 or higher than \$10,000,000 are considered outliers and dropped. Transactions with where the year built is after the transaction date are also considered problematic. Only transactions that are not foreclosures or intra-family transfers are used. Other observations are dropped to satisfy difference-in-difference assumptions and are explained the methodology. 
+
+
+\subfile{sumtab.tex}
+
+
+\section{Methodology}
+
+Using a difference-in-difference (DiD) approach that exploits time variation in deletion of NPL sites. Similar to \citet{Guignet2013}, houses near a Superfund lanfill site that is cleaned before 2016 is placed in the treatment group, while houses near a Superfund lanfill site that is not cleaned before 2016 is placed in the control group. This restricts the sample to houses near Superfund lanfill sites. Individuals who buy or sell houses near Superfund lanfill sites may be different from individuals who buy or sell houses not near Superfund lanfill sites. 
+
+There are three assumptions needed to give a difference-in-difference estimator causal interpretation: no effect on pre-treatment (NEPT) assumption, stable unit treatment value assumption (SUTVA), and common trends (CT) assumption. The NEPT assumption holds if no one is anticipating the EPA's decision to change the status of the Superfund lanfill site. If potential sellers anticipate a deletion from the NPL, a potential seller may delay selling the house until after the site is deleted from the NPL. Then sell the house after the site is deleted. To limit the impact of this behavior on my estimation, I create a buffer dropping housing transactions that occur within 1 year of deletion from the NPL.
+
+The SUTVA holds if the control group is not affected by the treatment group or vice versa. If there is a spatial equilibrium in the housing market, the hedonic price function is not just determined by the amenities of house $i$ but also by the price and amenities of house $j$, the next best alternative \citep{tiebout}. It is not known \textit{a priori} which houses are direct substitutes or in the same housing market. It is also not known which houses indirectly affect the price of other houses through a spatial arbitrage mechanism. I assume that the assume that houses 30 km away from each other will be have insignificant effects from the spatial equilibrium.
+
+I also choose to limit the amount of houses in the control group to prevent houses which are to far away from the treated houses and subject to different market forces. Currently, 30 km is used as minimum cut-off and 100 km is used as a maximum cut-off. However, I plan to have robustness checks changing the sensitivity of assumption. 
+
+\medskip
+
+\begin{tikzpicture}
+  % choose a seed for pseudo-random generator
+  \pgfmathsetseed{\pdfuniformdeviate 10000000}
+
+\node [fill=blue!50,draw,circle] at (6,3) {Control};
+\node [fill=green!50,draw,circle] at (6,1) {Treated};
+\path[clip, draw] (0, 0) circle (4);
+\path[fill=blue!50] (2, 2) circle (.5);
+\path[fill=blue!50] (-3, 1) circle (.5);
+\path[fill=blue!50] (0, -4) circle (.5);
+\path[fill=blue!50] (1.6, -1) circle (.5);
+\draw[fill=white!50] (0,0)  circle (2);
+  
+
+\node (20 km) at (0,1.3) [above right] {30 km};
+\node (100 km) at (0,3.3) [above right] {100 km};
+
+%\node (A) at (120:2) [above right] {$A$};
+
+      % define a circle (center=O and \radius)
+  \coordinate (T) at (0,0);
+  \def\radius{.5cm}
+
+  % draw this circle and its center
+  \draw[fill=green!50] (T) circle[radius=\radius];
+  %\fill (T) circle[radius=2pt] node[below left] {T};
+  \draw[->](0,0) -- (.5,0) node[pos=2,above] {$d$ km};
+  \draw[->](2,2) -- (2.5,2) node[pos=2,above] {$d$ km};
+  \draw[->](-3,1) -- (-2.5,1) node[pos=2,above] {$d$ km};
+  
+  \node (2 km) at (-1,.5) [above right] {\small\text{ Superfund}};
+  \node (2 km) at (-.6,0) [above right] {\small\text{ Site}};
+  \fill (0,0) circle [radius=2pt];
+  
+  \node (2 km) at (.7,2.5) [above right] {\small\text{ Superfund}};
+  \node (2 km) at (1.4,2) [above right] {\small\text{ Site}};
+  \fill (2,2) circle [radius=2pt];
+  
+  \node (2 km) at (-3.6,1.5) [above right] {\small\text{ Superfund}};
+  \node (2 km) at (-3.6,1) [above right] {\small\text{ Site}};
+  \fill (-3,1) circle [radius=2pt];
+  
+  
+   
+  
+\end{tikzpicture}
+
+The CT assumption holds if the outcome variable of treatment and control groups have parallel trends. To examine the plausibility of this assumption, I examine the residuals conditional on housing characteristics with time fixed effects. Separate LOESS regressions are fitted on the pre-treatment and post-treatment periods for both treatment and control groups \citep{loess}. These conditional residual trends show the variation in the log housing price that is unexplained by the housing characteristics used for estimation. Figures \ref{fig:trends6k} and \ref{fig:trends10k} appear to have the strongest evidence of parallel trends for distance cut-offs 6 and 10 kilometers, while Figure \ref{fig:trends2k} provides less compelling evidence for distance cut-off 2 kilometers.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[scale=.6]{lmdidavgTATE10k.png}
+    \caption{Trends with cut-off $d = 10k$}
+    \label{fig:trends2k}
+\end{figure}
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[scale=.6]{lmdidavgTATE6k.png}
+    \caption{Trends with cut-off $d = 6k$}
+    \label{fig:trends6k}
+\end{figure}
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[scale=.6]{lmdidavgTATE2k.png}
+    \caption{Trends with cut-off $d = 2k$}
+    \label{fig:trends10k}
+\end{figure}
+\medskip
+
+
+ \begin{figure}{\textwidth}
+  \centering
+  \includegraphics[width=.9\linewidth]{dagg3.png}
+  \caption{Directed Acyclic Graph}
+  \label{fig:sub1}
+  \end{figure}
+
+
+The pre-treatment lagged house price controls for household specific unobservables and pre-treatment neighborhood qualities. The lagged housing prices are also used by \citet{bajari} in the context of hedonic price analysis. \citet{bajari} show that under the rational expectations assumption, coefficients can be estimated using two-stage nonlinear least squares. I remove observations where the previous sale occurred after deletion from the NPL, which allows for linear estimation of the coefficients of interest. Linear estimation allows me to use a variety of alternative estimation techniques and examine the effect of treatment on pre-treatment quantiles.
+
+After limiting the sample to households $j$ sold at time $t = 1,...T$, given that $t$ is pre-treatment, we have a set of observations up to time $T$ for each household $j$,
+\vspace{-2mm}
+\begin{align*}
+  ln(Price_{j,1})&=\alpha+ \betax_{j,1}+\xi_{j,1}\\
+        &= \quad {\vdots} \quad \quad \quad \quad {\vdots}\\
+  ln(Price_{j,T})&=\alpha+ \betax_{j,T}+\xi_{j,T}.
+\end{align*}
+\noindent
+Follow \citet{bajari}, this paper assumes omitted attributes evolves over a first-order Markov process,
+\[\xi_{j,t'}=\gamma(t,t')\xi_{j,t}+\eta_{j,t',t},\]
+\noindent
+where  $\eta_{j,t',t}$ is the error from changes in the omitted attributes over time. Plugging in, the equation becomes,
+\vspace{-2mm}
+\begin{align*}
+    ln(Price_{j,t'})&=\alpha+ \beta x_{j,t'}+\xi_{j,t'}\\
+    &=\alpha+ \beta x_{j,t'}+\gamma(t,t')[ln(Price_{j,t} -\alpha-\beta x_{j,t}]+\eta_{j,t',t}\\
+    &=\alpha(1-\gamma(t,t'))+\gamma(t,t')lnPrice_{j,t}+\beta (x_{j,t'}-\gamma(t,t')x_{j,t})+\eta_{j,t',t}\\
+\end{align*}
+\noindent
+Grouping the time invariant housing characteristics in $z_j$ and the difference-in-difference variables, the equation becomes,
+\vspace{-2mm}
+\begin{align*}
+    ln(Price_{j,t'})&=\alpha(1-\gamma(t,t'))+\gamma(t,t')lnPrice_{j,t}+\beta (x_{j,t'}-\gamma(t,t')x_{j,t})+\\
+    & \quad \quad (1- \gamma(t,t')) \beta_z z_j +
+    (1- \gamma(t,t')) \beta_{TG} TG_j +\\
+    & \quad \quad 
+    \beta_{T} ((TG_j \times Post_{t'}) -\gamma(t,t')(TG_j \times Post_{t}))+\eta_{j,t',t}\\
+\end{align*}
+\vspace{-2mm}
+\noindent
+Since only observations with $t$ is pre-treatment are included, $Post_t$ is a vector of zeros and the model becomes
+\vspace{-2mm}
+\begin{align*}
+    ln(Price_{j,t'})&=\alpha(1-\gamma(t,t'))+\gamma(t,t')lnPrice_{j,t}+\beta (x_{j,t'}-\gamma(t,t')x_{j,t})+\\
+    & \quad \quad \beta_z z_j (1- \gamma(t,t'))+
+    \beta_{TG} TG_j (1- \gamma(t,t'))+\\
+    & \quad \quad 
+    \beta_{T} (TG_j \times Post_{t'})+\eta_{j,t',t}\\
+\end{align*}
+
+The reduced form equation becomes,
+\vspace{-2mm}
+\begin{align*}
+    ln(Price_{j,t'})&= \pi^0_{t,t'}+\pi^1_{t,t'}TG_{j}+\pi^2_{t,t'}(TG_j\times Post_{t'})+\pi^3_{j}z_j+\\
+    & \quad \quad \pi^4_{t,t'}ln(Price_{j,t}) +\delta_{j}+\theta^1_t+\theta^2_{t'}+\theta^3_{t,t'} +\eta_{j,t,t'}.
+\end{align*}
+\noindent
+Note that $\pi^4_{t,t'}$ can be interpreted as $\gamma(t,t')$
+  
+
+
+The general specification for this paper is the log-linear form,
+\begin{equation}
+    ln(Price)_{ijt}=\beta_0+ \beta_1Treatment_{ijt}+\beta_2 Treated_{ijt}+\alpha_1 X_{i}+\alpha_2ln(Price)_{ijt-1}+\delta_{j}+\gamma_t+\epsilon_{ij},
+\end{equation}
+where the outcome variable is log price for house $i$, location $j$, and time $t$. On the right hand side of the equation, $Treatment_{ijt}$ variable signifies if a house was sold within $d$ km of a Superfund landfill site that was treated in at sometime in the sample, $Treated_{ijt}$ variable signifies if a house was sold within $d$ km of a Superfund landfill site after it was cleaned. The other covariates are $ln(Price)_{ijt-1}$, which is the lagged dependent variable, and $X_{ij}$, which are the attributes of each house. There are time and census tract fixed effects, $\delta_{j}$ and $\gamma_t$. 
+
+To estimate the differing effects of treatment on pre-treatment quantiles, the specification becomes
+
+\begin{multline}
+    ln(Price)_{ijt}=\beta_0+ \sum_i^{10} \beta_1^i Treatment_{ijt}  Q_{ijt-1}+ \sum_i^{10}\beta_2^i Treated_{ijt} Q_{ijt-1}+
+    \\
+    \alpha_2ln(Price)_{ijt-1}+\sum_i^{10} \alpha_2^i Q_{ijt-1}+
+    \alpha_1 X_{i}+delta_{j}+\gamma_t+\epsilon_{ijt},\\
+\end{multline}
+\noindent
+where $Q_{ijt-1}$ is a set of dummy variable indicating the decile of the lagged housing price. The  $\beta_1^i$'s capture the difference between the treatment and control group deciles and $ \beta_2^i$'s capture the difference-in-difference estimator for decile. Here $\beta_2^i$'s can be interpreted as the average effect of deletion from the NPL for each decile. 
+
+
+
+
+
+
+\section{Results}
+
+The effects of the deletion from the NPL differ based on the water source of the landfills. The total effects are significant at all distance cut-offs, with the coefficients getting larger as distance increases. The effect on houses with well water is economically large with 51 percent increase in house price and decreases as distance cut-offs increase. Households with well water have the increases in price after the cleanup of landfills in the Superfund program.
+\subfile{ATEcomp.tex}
+\subfile{ATEcompmatch.tex}
+\subfile{ATEcompgam.tex}
+
+The effects of deletion on housing prices also varies greatly with pre-treatment price quantiles. In Figure \ref{fig:pT}, we see that the highest decile, prices from $(\$ 4,592,000,\$ 9,900,000]$, had the largest increase in value, around 20 percent. While the lowest two deciles, $(\$ 10,050,\$ 45,023]$ and $(\$ 45,023,\$ 68,003]$, have negatively and frequently significant coefficients. 
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[scale=.5]{coeffTATE.png}
+    \caption{Total Effect by Quantile}
+    \label{fig:pT}
+\end{figure}
+
+Figures \ref{fig:pM} and \ref{fig:pW}, show that difference in quantile effects largely come from the population with municipal water. While the effects on houses with well water are more homogeneous as many of the coefficients are not significally different from one another.
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[scale=.5]{coeffMUATE.png}
+   \caption{Effect on Houses with Municipal Water by Quantile}
+    \label{fig:pM}
+\end{figure}
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[scale=.5]{coeffWLATE.png}
+    \caption{Effect on Houses with Well Water by Quantile}
+    \label{fig:pW}
+\end{figure}
+
+\section{Conclusion}
+This paper finds the positive average treatment effects of cleanup of municipal landfills can be attributed to two groups. Houses with large pre-treatment values, $(\$ 4,592,000,\$ 9,900,000]$, had the largest effect, around 20 percent. While house in the lowest two deciles, $(\$ 10,050,\$ 45,023]$ and $(\$ 45,023,\$ 68,003]$, had negative and sometimes statistically significant effects. New York property taxes are used to pay for cleanup of municipal landfills on the Superfund program. Property taxes in New York vary greatly from county to county, but within municipalities are flat. These findings suggest that there is opportunity for land value capture, by charging higher property taxes to houses with higher values. 
+
+This paper also finds that the average treatment effects of Superfund lanfill cleanup on houses with well water is much larger than those with municipal water. The effects on houses with well water range from 51 percent to 30 percent depending on the distance from the Superfund landfill. Houses with well water must take on their own sanitation costs and might take on more health costs, when they choose a lower level of sanitation than municipal water sources. These findings suggest that there is opportunity for land value capture, by charging higher property taxes to houses with well water.
+
+
+
+
+\newpage
+\bibliography{ref}
+\bibliographystyle{apalike}
+
+\subfile{lmdidTATEbuffer1.tex}
+
+
+\subfile{lmdidMUATEbuffer1.tex}
+
+
+\subfile{lmdidWLATEbuffer1.tex}
+
+
+\end{document}
