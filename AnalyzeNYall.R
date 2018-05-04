@@ -717,8 +717,8 @@ dist<-c('10k','8k','6k','4k','2k')#,'1k','500m')
 
 laglead<-c("")
 treatl<-c('TATE','MUATE','WLATE')
-sample<-readRDS(paste0(path,"pretreatlag.rds")
-                    , refhook = NULL)
+#sample<-readRDS(paste0(path,"pretreatlag.rds"), refhook = NULL)
+sample<-readRDS(paste0(path,"fullcen.rds"), refhook = NULL)
 
 samplefull<-sample
 quant<-10
@@ -802,9 +802,11 @@ colnames(sumtab)<-NULL
 sumtab
 
 xtab<-xtable(sumtab)
-align(xtab) <- "r|l|l|rrrr|r|"
-print.xtable(xtab,include.rownames=FALSE,  hline.after = c(0,1,dim(sumtab)[1]),
+align(xtab) <- "rl|l|rrrr|r"
+print.xtable(xtab,include.rownames=FALSE,  hline.after = c(0,1,7,dim(sumtab)[1]),
              include.colnames=FALSE, sanitize.text.function = identity,
+             caption = "Summary Statistics", 
+             label = "tab:summary",
              type="latex", file=paste0(path,'latex/sumtab.tex'))
 
 
@@ -878,7 +880,7 @@ for(i in c("lm","gam","sp","match")){
     }
   }
 }
-di<-3
+di<-1
 treat<-1
 #psite<-21
 
@@ -967,7 +969,7 @@ for(treat in  1:length(treatl)){
       sample$tprelprice<-sample$prelogprice*ifelse(sample$treatst==1 & sample$presstatusd==0,1,0)
       sample$treatfin<-ifelse(sample$treatst==1 & sample$presstatusd==0,1,0)
       indx<- factor(as.numeric(cut2(sample$preprice,cuts=qcut,minmax=TRUE)))
-      indx2<- factor(as.numeric(cut2(sample$prelogpricewlag,cuts=qcut,minmax=TRUE)))
+      indx2<- factor(as.numeric(cut2(exp(sample$prelogpricewlag),cuts=qcut,minmax=TRUE)))
       #indx<-ifelse(as.numeric(indx)!=as.numeric(levels(indx)[1])&
         #             as.numeric(indx)!=as.numeric(levels(indx)[length(levels(indx))]),"med",indx)
       #indx<-ifelse(indx==1,"bottom",indx)
@@ -976,53 +978,55 @@ for(treat in  1:length(treatl)){
       treatind<-model.matrix(~treatst:indx-1,sample)
       treatind<-treatind[,1:(length(unique(indx)))]
       
-      X<-model.matrix(~ treatmentgroup:as.factor(lsite)+indx:treatmentgroup:as.factor(lsite)+#:indx+#bs(timetotreat,5)+bs(day,5)+#as.factor(round(timetotreat,1))+
+      X<-model.matrix(~ treatmentgroup+indx:treatmentgroup+#:indx+#bs(timetotreat,5)+bs(day,5)+#as.factor(round(timetotreat,1))+
+                        #treatmentgroup:as.factor(lsite)+indx:treatmentgroup:as.factor(lsite)+#:indx+#bs(timetotreat,5)+bs(day,5)+#as.factor(round(timetotreat,1))+
                         #poly(timetotreat,3)+poly(day,3)+
                         #treatmentgroup*timetotreat+#treatmentgroup*day+
                         LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                        sqfeet+ prediffdate+predate+prelogprice+ 
-                        indx+#presstatusd+
+                        timetotreat+
+                        sqfeet+ prediffdate+predate+prelogprice+indx+#presstatusd+
                         #as.factor(floor(timetotreat))+
                         -1,sample)
       
-      qr.X <- qr(X, tol=1e-3, LAPACK = FALSE)
+      qr.X <- qr(X, tol=1e-2, LAPACK = FALSE)
       (rnkX <- qr.X$rank)  ## 4 (number of non-collinear columns)
       (keep <- qr.X$pivot[seq_len(rnkX)])
       ## 1 2 4 5 
       X <- X[,keep]
       
       
-      Xlag<-model.matrix(~ treatmentgroup:as.factor(lsite)+indx:treatmentgroup:as.factor(lsite)+#:indx+#bs(timetotreat,5)+bs(day,5)+#as.factor(round(timetotreat,1))+
-                        #poly(timetotreat,3)+poly(day,3)+
+      Xlag<-model.matrix(~ treatmentgroup+indx:treatmentgroup+#:indx+#bs(timetotreat,5)+bs(day,5)+#as.factor(round(timetotreat,1))+
+                           #treatmentgroup:as.factor(lsite)+indx:treatmentgroup:as.factor(lsite)+#:indx+#bs(timetotreat,5)+bs(day,5)+#as.factor(round(timetotreat,1))+
+                           #poly(timetotreat,3)+poly(day,3)+
                         #treatmentgroup*timetotreat+#treatmentgroup*day+
-                        LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                        sqfeet+ prediffdate+predate+prelogprice+ prelogpricewlag+ #indx2+
-                        indx+#presstatusd+
-                        #as.factor(floor(timetotreat))+
+                          timetotreat+
+                          LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
+                             sqfeet+ prediffdate+predate+prelogprice+indx+
+                          prelogpricewlag+indx2+#as.factor(floor(timetotreat))+
                         -1,sample)
       
       
-      qr.Xlag <- qr(Xlag, tol=1e-3, LAPACK = FALSE)
+      qr.Xlag <- qr(Xlag, tol=1e-2, LAPACK = FALSE)
       (rnkXlag <- qr.Xlag$rank)  ## 4 (number of non-collinear columns)
       (keeplag <- qr.Xlag$pivot[seq_len(rnkXlag)])
       ## 1 2 4 5 
       Xlag <- Xlag[,keeplag]
       
       results.lm.t.did.i<-felm(logprice ~treatind+
-                                 X|as.factor(PropertyAddressCensusTractAndBlock)+
+                                 X|as.factor(cbl)+
                                  as.factor(year):as.factor(quarter)+
-                                 as.factor(preyear):as.factor(prequarter)| 0 | PropertyAddressCensusTractAndBlock:year,sample) #as.factor(HHID)+
+                                 as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
       summary(results.lm.t.did.i)
       
       results.lm.t.did.a<-felm(logprice ~treatind+
-                                 X|as.factor(PropertyAddressCensusTractAndBlock)+
+                                 X|as.factor(cbg)+
                                  as.factor(year):as.factor(quarter)+
                                  as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
       summary(results.lm.t.did.a)
       
-      results.lm.t.did.s<-felm(logprice ~treatind+X|as.factor(lsite)+
+      results.lm.t.did.s<-felm(logprice ~treatind+X|as.factor(ctr)+
                                  as.factor(year):as.factor(quarter)+
-                                 as.factor(preyear):as.factor(prequarter)| 0 | PropertyAddressCensusTractAndBlock:year,sample) #as.factor(HHID)+
+                                 as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
       summary(results.lm.t.did.s)
       
       results.lm.t.did.y<-felm(logprice ~treatind+X|as.factor(lsite)+
@@ -1034,27 +1038,27 @@ for(treat in  1:length(treatl)){
       #################################
       #Spatial
       
-      results.lm.t.did.i.x2<-felm(logprice ~treatind+
-                                Xlag|as.factor(PropertyAddressCensusTractAndBlock)+
-                                 as.factor(year):as.factor(quarter)+
-                                 as.factor(preyear):as.factor(prequarter)| 0 | PropertyAddressCensusTractAndBlock:year,sample) #as.factor(HHID)+
-      summary(results.lm.t.did.i.x2)
-      
-      results.lm.t.did.a.x2<-felm(logprice ~treatind+
-                                 Xlag|as.factor(PropertyAddressCensusTractAndBlock)+
+      results.sp.t.did.i<-felm(logprice ~treatind+
+                                Xlag|as.factor(cbl)+
                                  as.factor(year):as.factor(quarter)+
                                  as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
-      summary(results.lm.t.did.a.x2)
+      summary(results.sp.t.did.i)
       
-      results.lm.t.did.s.x2<-felm(logprice ~treatind+Xlag|as.factor(lsite)+
-                                 as.factor(year):as.factor(quarter)+
-                                 as.factor(preyear):as.factor(prequarter)| 0 | PropertyAddressCensusTractAndBlock:year,sample) #as.factor(HHID)+
-      summary(results.lm.t.did.s.x2)
-      
-      results.lm.t.did.y.x2<-felm(logprice ~treatind+Xlag|as.factor(lsite)+
+      results.sp.t.did.a<-felm(logprice ~treatind+
+                                 Xlag|as.factor(cbg)+
                                  as.factor(year):as.factor(quarter)+
                                  as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
-      summary(results.lm.t.did.y.x2)
+      summary(results.sp.t.did.a)
+      
+      results.sp.t.did.s<-felm(logprice ~treatind+Xlag|as.factor(ctr)+
+                                 as.factor(year):as.factor(quarter)+
+                                 as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
+      summary(results.sp.t.did.s)
+      
+      results.sp.t.did.y<-felm(logprice ~treatind+Xlag|as.factor(lsite)+
+                                 as.factor(year):as.factor(quarter)+
+                                 as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
+      summary(results.sp.t.did.y)
       
       #results.lm.t.did.z<-felm(logprice ~treatind+X|as.factor(PropertyZip)+as.factor(year):as.factor(quarter)+
       #                           as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
@@ -1069,13 +1073,70 @@ for(treat in  1:length(treatl)){
                          #poly(timetotreat,3)+poly(day,3)+
                          #treatmentgroup*timetotreat+#treatmentgroup*day+
                          LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                         sqfeet+ prediffdate+predate+prelogprice+ 
-                         #indx+#presstatusd+
+                         sqfeet+ prediffdate+predate+prelogprice+ indx+#indx+#presstatusd+
                          #as.factor(floor(timetotreat))+
                          as.factor(year):as.factor(quarter)+
                          as.factor(preyear):as.factor(prequarter)-1,sample)
       
-      resid.lm.t.did<-felm(logprice ~Xg[,-1]|as.factor(PropertyAddressCensusTractAndBlock),sample) #as.factor(HHID)+
+      Xglag<-model.matrix(~ treatmentgroup+#:indx+#bs(timetotreat,5)+bs(day,5)+#as.factor(round(timetotreat,1))+
+                         #poly(timetotreat,3)+poly(day,3)+
+                         #treatmentgroup*timetotreat+#treatmentgroup*day+
+                         LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
+                         sqfeet+ prediffdate+predate+prelogprice+ indx+
+                           prelogpricewlag+indx2+#indx+#presstatusd+
+                         #as.factor(floor(timetotreat))+
+                         as.factor(year):as.factor(quarter)+
+                         as.factor(preyear):as.factor(prequarter)-1,sample)
+      
+      
+      sample$tttyear<-as.factor(ceiling(as.numeric(sample$timetotreat)))
+      sample1<-subset(sample,tttyear!=1)
+      ptlag<-model.matrix(~treatmentgroup:as.factor(ceiling(as.numeric(timetotreat))),sample1)
+      #as.factor(cut2(prediffdate, g=quant))+
+      
+      resid.ptlag<-felm(logprice~ptlag[,c(-10)]+#treatmentgroup+
+                          LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
+                          sqfeet+timetotreat+#treatmentgroup:timetotreat+#as.factor(tttyear)+
+                          prelogprice|as.factor(lsite):as.factor(year):as.factor(quarter)+
+                          as.factor(lsite):as.factor(preyear):as.factor(prequarter)+
+                          as.factor(ctr)|0|lsite:year,sample1)
+      summary(resid.ptlag)
+     
+      qu<-c("Bottom","Middle","Top")
+      yearstest<-9
+      qun<-c(-yearstest:-2,2:yearstest)
+      allModelFrame <- data.frame(Variable = qun,
+                                  Coefficient = as.numeric(coef(summary(resid.ptlag))[,"Estimate"][(11-yearstest):(8+yearstest)]),
+                                  SE = as.numeric(coef(summary(resid.ptlag))[,"Cluster s.e."][(11-yearstest):(8+yearstest)]),
+                                  modelName = "ptlag")
+      
+      
+      interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
+      leg<-c('10k','8k','6k','4k','2k')
+      allModelFrame<-allModelFrame[allModelFrame$modelName!="2k",]
+      allModelFrame$modelName<-as.factor( allModelFrame$modelName)
+      allModelFrame$modelName<-factor(allModelFrame$modelName,levels(allModelFrame$modelName)[c(2:5,1)])
+      
+      # Plot
+      zp1 <- ggplot(allModelFrame, aes(colour = modelName ))
+      zp1 <- zp1 + geom_hline(yintercept = 0, colour = gray(1/2), lty = 2)
+      zp1 <- zp1 + geom_pointrange(aes(x = Variable, y = Coefficient, ymin = Coefficient - SE*interval2,
+                                       ymax = Coefficient + SE*interval2,color =modelName),
+                                   lwd = 1/2, position = position_dodge(width = 1/2),
+                                   shape = 21, fill = "WHITE")
+      #zp1 <- zp1 + coord_flip() + theme_bw()
+      
+      #zp1 <- zp1 + geom_line(data = allModelFrame, aes(linetype =modelName ), size = 1) +
+      zp1 <- zp1 +theme(legend.position="none")+ ggtitle("Test of Difference in Treatment and Control Groups")+xlab('Year From Treatment')  
+      #zp1 <- zp1 + scale_x_continuous(labels=c("1"="B","2"="M","3"="T"))
+      zp1 <- zp1 + scale_x_continuous(breaks=qun)
+      print(zp1)  # The trick to these is position_dodge().
+      
+      if(match==""){
+      ggsave(file=paste(path,'latex/','pretrends',treatc,dic, 'h5.png', sep=""),height = 5,width =9)
+      }
+      
+      resid.lm.t.did<-felm(logprice ~Xg[,-1]|as.factor(cbl),sample) #as.factor(HHID)+
       summary(resid.lm.t.did)
       
       coefdid<-as.matrix(resid.lm.t.did$coefficients)
@@ -1109,10 +1170,22 @@ for(treat in  1:length(treatl)){
       results.lm.t.did.agg<-felm(logprice ~treatst+Xg|
                                    as.factor(PropertyAddressCensusTractAndBlock),sample) #as.factor(HHID)+
       summary(results.lm.t.did.agg)
+      
+      
       if(match==""){
       betas.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Estimate"][1])
       ses.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Std. Error"][1])
       ps.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Pr(>|t|)"][1])
+      
+      results.sp.t.did.agg<-felm(logprice ~treatst+Xglag|
+                                   as.factor(PropertyAddressCensusTractAndBlock),sample) #as.factor(HHID)+
+      summary(results.sp.t.did.agg)
+      
+      betas.sp.did[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg))[,"Estimate"][1])
+      ses.sp.did[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg))[,"Std. Error"][1])
+      ps.sp.did[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg))[,"Pr(>|t|)"][1])
+      
+      
       }
       if(match=="match"){
         betas.match.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Estimate"][1])
@@ -1250,12 +1323,17 @@ for(treat in  1:length(treatl)){
         # effects.finalb.lag.2sls.robust2<- impacts(results.stsls, listw= Wst, R=100)
         #summary(effects.finalb.lag.2sls.robust2, zstats=TRUE, short=TRUE)
       }
-      if(match=="nomatch"){
+      if(match==""){
       if(treatc=="TATE"){
         betas.lm.t.did.TATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Estimate"][1:quant])
         betas.lm.t.did.TATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Estimate"][1:quant])
         betas.lm.t.did.TATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Estimate"][1:quant])
         betas.lm.t.did.TATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Estimate"][1:quant])
+        
+        betas.sp.t.did.TATE.i[,di]<-as.numeric(coef(summary(results.sp.t.did.i))[,"Estimate"][1:quant])
+        betas.sp.t.did.TATE.a[,di]<-as.numeric(coef(summary(results.sp.t.did.a))[,"Estimate"][1:quant])
+        betas.sp.t.did.TATE.s[,di]<-as.numeric(coef(summary(results.sp.t.did.s))[,"Estimate"][1:quant])
+        betas.sp.t.did.TATE.y[,di]<-as.numeric(coef(summary(results.sp.t.did.y))[,"Estimate"][1:quant])
         
         betas.gam.t.did.TATE.[,di]<-as.numeric(gam.model$p.table[,"Estimate"])[2:(quant+1)]
         #betas.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][1:quant])
@@ -1264,12 +1342,22 @@ for(treat in  1:length(treatl)){
         ses.lm.t.did.TATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Cluster s.e."][1:quant])
         ses.lm.t.did.TATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Cluster s.e."][1:quant])
         
+        ses.sp.t.did.TATE.i[,di]<-as.numeric(coef(summary(results.sp.t.did.i))[,"Cluster s.e."][1:quant])
+        ses.sp.t.did.TATE.a[,di]<-as.numeric(coef(summary(results.sp.t.did.a))[,"Cluster s.e."][1:quant])
+        ses.sp.t.did.TATE.s[,di]<-as.numeric(coef(summary(results.sp.t.did.s))[,"Cluster s.e."][1:quant])
+        ses.sp.t.did.TATE.y[,di]<-as.numeric(coef(summary(results.sp.t.did.y))[,"Cluster s.e."][1:quant])
+        
         ses.gam.t.did.TATE.[,di]<-as.numeric(gam.model$p.table[,"Std. Error"])[2:(quant+1)]
         #ses.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][1:quant])
         ps.lm.t.did.TATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.TATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.TATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.TATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Pr(>|t|)"][1:quant])
+        
+        ps.sp.t.did.TATE.i[,di]<-as.numeric(coef(summary(results.sp.t.did.i))[,"Pr(>|t|)"][1:quant])
+        ps.sp.t.did.TATE.a[,di]<-as.numeric(coef(summary(results.sp.t.did.a))[,"Pr(>|t|)"][1:quant])
+        ps.sp.t.did.TATE.s[,di]<-as.numeric(coef(summary(results.sp.t.did.s))[,"Pr(>|t|)"][1:quant])
+        ps.sp.t.did.TATE.y[,di]<-as.numeric(coef(summary(results.sp.t.did.y))[,"Pr(>|t|)"][1:quant])
         
         ps.gam.t.did.TATE.[,di]<-as.numeric(gam.model$p.table[,"Pr(>|t|)"])[2:(quant+1)]
         #ps.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][1:quant])
@@ -1281,6 +1369,11 @@ for(treat in  1:length(treatl)){
         betas.lm.t.did.MUATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Estimate"][1:quant])
         betas.lm.t.did.MUATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Estimate"][1:quant])
         
+        betas.sp.t.did.MUATE.i[,di]<-as.numeric(coef(summary(results.sp.t.did.i))[,"Estimate"][1:quant])
+        betas.sp.t.did.MUATE.a[,di]<-as.numeric(coef(summary(results.sp.t.did.a))[,"Estimate"][1:quant])
+        betas.sp.t.did.MUATE.s[,di]<-as.numeric(coef(summary(results.sp.t.did.s))[,"Estimate"][1:quant])
+        betas.sp.t.did.MUATE.y[,di]<-as.numeric(coef(summary(results.sp.t.did.y))[,"Estimate"][1:quant])
+        
         betas.gam.t.did.MUATE.[,di]<-as.numeric(gam.model$p.table[,"Estimate"])[2:(quant+1)]
         #betas.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][1:quant])
         ses.lm.t.did.MUATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Cluster s.e."][1:quant])
@@ -1288,12 +1381,23 @@ for(treat in  1:length(treatl)){
         ses.lm.t.did.MUATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Cluster s.e."][1:quant])
         ses.lm.t.did.MUATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Cluster s.e."][1:quant])
         
+        ses.sp.t.did.MUATE.i[,di]<-as.numeric(coef(summary(results.sp.t.did.i))[,"Cluster s.e."][1:quant])
+        ses.sp.t.did.MUATE.a[,di]<-as.numeric(coef(summary(results.sp.t.did.a))[,"Cluster s.e."][1:quant])
+        ses.sp.t.did.MUATE.s[,di]<-as.numeric(coef(summary(results.sp.t.did.s))[,"Cluster s.e."][1:quant])
+        ses.sp.t.did.MUATE.y[,di]<-as.numeric(coef(summary(results.sp.t.did.y))[,"Cluster s.e."][1:quant])
+        
+        
         ses.gam.t.did.MUATE.[,di]<-as.numeric(gam.model$p.table[,"Std. Error"])[2:(quant+1)]
         #ses.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][1:quant])
         ps.lm.t.did.MUATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.MUATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.MUATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.MUATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Pr(>|t|)"][1:quant])
+        
+        ps.sp.t.did.MUATE.i[,di]<-as.numeric(coef(summary(results.sp.t.did.i))[,"Pr(>|t|)"][1:quant])
+        ps.sp.t.did.MUATE.a[,di]<-as.numeric(coef(summary(results.sp.t.did.a))[,"Pr(>|t|)"][1:quant])
+        ps.sp.t.did.MUATE.s[,di]<-as.numeric(coef(summary(results.sp.t.did.s))[,"Pr(>|t|)"][1:quant])
+        ps.sp.t.did.MUATE.y[,di]<-as.numeric(coef(summary(results.sp.t.did.y))[,"Pr(>|t|)"][1:quant])
         
         ps.gam.t.did.MUATE.[,di]<-as.numeric(gam.model$p.table[,"Pr(>|t|)"])[2:(quant+1)]
         #ps.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][1:quant])
@@ -1305,6 +1409,11 @@ for(treat in  1:length(treatl)){
         betas.lm.t.did.WLATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Estimate"][1:quant])
         betas.lm.t.did.WLATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Estimate"][1:quant])
         
+        betas.sp.t.did.WLATE.i[,di]<-as.numeric(coef(summary(results.sp.t.did.i))[,"Estimate"][1:quant])
+        betas.sp.t.did.WLATE.a[,di]<-as.numeric(coef(summary(results.sp.t.did.a))[,"Estimate"][1:quant])
+        betas.sp.t.did.WLATE.s[,di]<-as.numeric(coef(summary(results.sp.t.did.s))[,"Estimate"][1:quant])
+        betas.sp.t.did.WLATE.y[,di]<-as.numeric(coef(summary(results.sp.t.did.y))[,"Estimate"][1:quant])
+        
         betas.gam.t.did.WLATE.[,di]<-as.numeric(gam.model$p.table[,"Estimate"])[2:(quant+1)]
         #betas.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Estimate"][1:quant])
         ses.lm.t.did.WLATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Cluster s.e."][1:quant])
@@ -1312,12 +1421,22 @@ for(treat in  1:length(treatl)){
         ses.lm.t.did.WLATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Cluster s.e."][1:quant])
         ses.lm.t.did.WLATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Cluster s.e."][1:quant])
         
+        ses.sp.t.did.WLATE.i[,di]<-as.numeric(coef(summary(results.sp.t.did.i))[,"Cluster s.e."][1:quant])
+        ses.sp.t.did.WLATE.a[,di]<-as.numeric(coef(summary(results.sp.t.did.a))[,"Cluster s.e."][1:quant])
+        ses.sp.t.did.WLATE.s[,di]<-as.numeric(coef(summary(results.sp.t.did.s))[,"Cluster s.e."][1:quant])
+        ses.sp.t.did.WLATE.y[,di]<-as.numeric(coef(summary(results.sp.t.did.y))[,"Cluster s.e."][1:quant])
+        
         ses.gam.t.did.WLATE.[,di]<-as.numeric(gam.model$p.table[,"Std. Error"])[2:(quant+1)]
         #ses.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Std. Error"][1:quant])
         ps.lm.t.did.WLATE.i[,di]<-as.numeric(coef(summary(results.lm.t.did.i))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.WLATE.a[,di]<-as.numeric(coef(summary(results.lm.t.did.a))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.WLATE.s[,di]<-as.numeric(coef(summary(results.lm.t.did.s))[,"Pr(>|t|)"][1:quant])
         ps.lm.t.did.WLATE.y[,di]<-as.numeric(coef(summary(results.lm.t.did.y))[,"Pr(>|t|)"][1:quant])
+        
+        ps.sp.t.did.WLATE.i[,di]<-as.numeric(coef(summary(results.sp.t.did.i))[,"Pr(>|t|)"][1:quant])
+        ps.sp.t.did.WLATE.a[,di]<-as.numeric(coef(summary(results.sp.t.did.a))[,"Pr(>|t|)"][1:quant])
+        ps.sp.t.did.WLATE.s[,di]<-as.numeric(coef(summary(results.sp.t.did.s))[,"Pr(>|t|)"][1:quant])
+        ps.sp.t.did.WLATE.y[,di]<-as.numeric(coef(summary(results.sp.t.did.y))[,"Pr(>|t|)"][1:quant])
         
         ps.gam.t.did.WLATE.[,di]<-as.numeric(gam.model$p.table[,"Pr(>|t|)"])[2:(quant+1)]
         #ps.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][1:quant])
@@ -1396,10 +1515,6 @@ for(treat in  1:length(treatl)){
           #ps.lm.t.es.TATE[,di]<-as.numeric(coef(summary(results.lm.t.es))[,"Pr(>|t|)"][1:quant])
         }
       }
-      #assign(paste0('lm.TATE.',k,i),lm.TATE)
-      #summary(results.lm.t.did)
-      #summary(results.lm.t.es)
-      
       if(FALSE){
         sdf<-10
         lat<-sample$PropertyAddressLatitude
@@ -1524,7 +1639,7 @@ for(treat in  1:length(treatl)){
 }
 
 for(statchange in c('')){
-  for(meth in c('lm','gam','match')){
+  for(meth in c('lm','gam','match','sp')){
     for(inf in c('did')){
       for(treat in  treatl){
         for(spec in specl){
@@ -1559,7 +1674,19 @@ for(statchange in c('')){
           }
         }
         
-        colnames(results.mat)<-c('10k','8k','6k','4k','2k')
+        results.mat<-rbind(c('10k','8k','6k','4k','2k'),results.mat)
+        if(meth=='lm'){
+          results.mat<-rbind(c('OLS','','','',''),results.mat)
+        }
+        if(meth=='gam'){
+          results.mat<-rbind(c('GAM','','','',''),results.mat)
+        }
+        if(meth=='match'){
+          results.mat<-rbind(c('Matching','','','',''),results.mat)
+        }
+        if(meth=='sp'){
+          results.mat<-rbind(c('Spatial Lag','','','',''),results.mat)
+        }
         # rn<-c(paste0("(",qcut[1],","),paste0(qcut[2],"]"),paste0("(",qcut[2],","),paste0(qcut[3],"]"),
         #      paste0("(",qcut[3],","),paste0(qcut[4],"]"),
         #     paste0("(",qcut[4],","),paste0(qcut[5],"]"),paste0("(",qcut[5],","),
@@ -1570,17 +1697,25 @@ for(statchange in c('')){
         rn<-c(paste0("(",qcut[1],",",qcut[2],"]"),"Bottom Ten Percentile" ,
               paste0("(",qcut[2],",",qcut[quant],"]"),"Middle 80 Percentile" ,
               paste0("(",qcut[quant],",",qcut[quant+1],"]"), "Top Ten Percentile")
-        rn2<-c(paste0("(",qcut[1],", ",qcut[2],"]")," ",paste0("(",qcut[2],",  ",qcut[3],"]"),"  ",
+        rn2<-c("                                      ","                      ",paste0("(",qcut[1],", ",qcut[2],"]")," ",paste0("(",qcut[2],",  ",qcut[3],"]"),"  ",
                paste0("(",qcut[3],", ",qcut[4],"]"),"   ",
                paste0("(",qcut[4],",",qcut[5],"]"),"     ",paste0("(",qcut[5],",",qcut[6],"]"),"      ",
                paste0("(",qcut[6],",",qcut[7],"]"),"       ",paste0("(",qcut[7],",",qcut[8],"]"),"        ",
-               paste0("(",qcut[8],",",qcut[9],"]"),"           ", paste0("(",qcut[9],",",qcut[10],"]"),"        ",
-               paste0("(",qcut[10],",",qcut[11],"]"),"                ")
-        rownames(results.mat)<-rn2
-        xtable(results.mat)
-        print.xtable(xtable(results.mat),include.rownames=TRUE, 
-                     include.colnames=TRUE, sanitize.text.function = identity,
-                     type="latex", file=paste0(path,'latex/',meth,inf,statchange,treat,spec,"buffer",buf,".tex"))
+               paste0("(",qcut[8],",",qcut[9],"]"),"           ", paste0("(",qcut[9],",",qcut[10],"]"),"           ",
+               paste0("(",qcut[10],",",qcut[11],"]"),"                       ")
+        #rownames(results.mat)<-rn2
+        results.mat<-cbind(rn2,results.mat)
+        xtab<-xtable(results.mat)
+        align(xtab) <- "rl|rrrrr"
+        print.xtable(xtab,include.rownames=FALSE, hline.after = c(0,1,2,dim(results.mat)[1]),
+                     include.colnames=FALSE, sanitize.text.function = identity,
+                     #caption = "example", 
+                     label = paste0("tab:",meth,inf,statchange,treat,spec),
+                     type="latex", file=paste0(path,'latex/',meth,inf,statchange,treat,spec,".tex"))
+        
+        
+        
+        
         qu<-c("Bottom","Middle","Top")
         qun<-c(1:10)
         allModelFrame <- data.frame(Variable = qun,
@@ -1627,7 +1762,7 @@ for(statchange in c('')){
   }
 }
 
-for(meth in c("lm","gam","match")){
+for(meth in c("lm","gam","match",'sp')){
   p<-get(paste0('ps.',meth,'.did'))
   mystars <- ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "* ", ifelse(p < .1, "^\\bullet  ", " "))))
   
@@ -1657,7 +1792,19 @@ for(meth in c("lm","gam","match")){
     }
   }
   
-  colnames(results.mat)<-c('10k','8k','6k','4k','2k')
+  results.mat<-rbind(c('10k','8k','6k','4k','2k'),results.mat)
+  if(meth=='lm'){
+    results.mat<-rbind(c('OLS','','','',''),results.mat)
+  }
+  if(meth=='gam'){
+    results.mat<-rbind(c('GAM','','','',''),results.mat)
+  }
+  if(meth=='match'){
+    results.mat<-rbind(c('Matching','','','',''),results.mat)
+  }
+  if(meth=='sp'){
+    results.mat<-rbind(c('Spatial Lag','','','',''),results.mat)
+  }
   # rn<-c(paste0("(",qcut[1],","),paste0(qcut[2],"]"),paste0("(",qcut[2],","),paste0(qcut[3],"]"),
   #      paste0("(",qcut[3],","),paste0(qcut[4],"]"),
   #     paste0("(",qcut[4],","),paste0(qcut[5],"]"),paste0("(",qcut[5],","),
@@ -1665,13 +1812,18 @@ for(meth in c("lm","gam","match")){
   #   paste0(qcut[8],"]"),paste0("(",qcut[8],","),paste0(qcut[9],"]"),paste0("(",qcut[9],","),
   #  paste0(qcut[10],"]"),
   # paste0("(",qcut[10],","),paste0(qcut[11],"]"))
-  rn<-c("Total","  ","Municipal Water","   ","Well Water","    ")
+  rn<-c(" ","  ", "Total","  ","Municipal Water","   ","Well Water","    ")
   
-  rownames(results.mat)<-rn
-  xtable(results.mat)
-  print.xtable(xtable(results.mat),include.rownames=TRUE, 
-               include.colnames=TRUE, sanitize.text.function = identity,
+  #rownames(results.mat)<-rn
+  results.mat<-cbind(rn,results.mat)
+  xtab<-xtable(results.mat)
+  align(xtab) <- "rl|rrrrr"
+  print.xtable(xtab,include.rownames=FALSE, hline.after = c(0,1,2,dim(results.mat)[1]),
+               include.colnames=FALSE, sanitize.text.function = identity,
+               #caption = "example", 
+               label = paste0("tab:",meth,"water"),
                type="latex", file=paste0(path,'latex/ATEcomp',meth,'.tex'))
+  
   qu<-c("Bottom","Middle","Top")
   if(FALSE){
     allModelFrame <- data.frame(Variable = qu,
@@ -1714,7 +1866,7 @@ for(meth in c("lm","gam","match")){
 }
 
 for(statchange in c('')){
-  for(meth in c('lm',"match")){
+  for(meth in c('lm',"match",'sp')){
     for(inf in c('did')){
       for(treat in  treatl){
         for(di in dist){
@@ -1833,7 +1985,7 @@ for(statchange in c('')){
             
            
             qu<-c("Bottom","Middle","Top")
-            leg<-c('Tract (Tract by year)','Tract (Site by year)','Site (Tract by year)','Site (Site by year)')
+            leg<-c('Block','Block Group','Tract','Site')
             qun<-c(1:10)
             for(j in c("4k","6k","8k","10k")){
               pb<-get(paste0("pb",j))
@@ -1841,7 +1993,7 @@ for(statchange in c('')){
             allModelFrame <- data.frame(Variable = qun,
                                         Coefficient = pb[,1],
                                         SE = se[, 1],
-                                        modelName = 'Tract (Tract by year)')
+                                        modelName = 'Block')
             for(i in 2:length(leg)){
               le<-leg[i]
               modelFrame <- data.frame(Variable =  qun,
@@ -1852,13 +2004,15 @@ for(statchange in c('')){
               
             }
             
-            interval2 <- -qnorm((1-0.90)/2)  # 95% multiplier
+            interval2 <- -qnorm((1-0.95)/2)  # 95% multiplier
             allModelFrame<-allModelFrame[allModelFrame$modelName!="2k",]
-            allModelFrame$modelName<-as.factor( allModelFrame$modelName)
-            allModelFrame$modelName<-factor(allModelFrame$modelName,levels(allModelFrame$modelName)[c(2:5,1)])
+            allModelFrame$modelName<-factor( allModelFrame$modelName,ordered = TRUE)
+            allModelFrame$modelName<-factor(allModelFrame$modelName,levels(allModelFrame$modelName)[c(1,2,4,3)],ordered = TRUE)
+            
             
             # Plot
             zp1 <- ggplot(allModelFrame, aes(colour = modelName ))
+              
             zp1 <- zp1 + geom_hline(yintercept = 0, colour = gray(1/2), lty = 2)
             zp1 <- zp1 + geom_pointrange(aes(x = Variable, y = Coefficient, ymin = Coefficient - SE*interval2,
                                              ymax = Coefficient + SE*interval2,color =modelName),
@@ -1869,10 +2023,13 @@ for(statchange in c('')){
             #zp1 <- zp1 + geom_line(data = allModelFrame, aes(linetype =modelName ), size = 1) +
             zp1 <- zp1 + ggtitle("Comparing distance cut-offs")+xlab('Quantile')  
             #zp1 <- zp1 + scale_x_continuous(labels=c("1"="B","2"="M","3"="T"))
+            #scale_color_discrete(breaks=c("1","3","10")
+              
             zp1 <- zp1 + scale_x_continuous(breaks=qun)
+            zp1 <- zp1  +  labs(color="Fixed Effects")
             print(zp1)  # The trick to these is position_dodge().
             
-            ggsave(file=paste(path,'latex/','coeff',meth,treat,spec,j, 'ols.png', sep=""),height = 7,width =9)
+            ggsave(file=paste(path,'latex/','coeff',meth,treat,j, 'ols.png', sep=""),height = 7,width =9)
             }
             }
         }
