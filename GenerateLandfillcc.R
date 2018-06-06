@@ -515,7 +515,7 @@ for(i in as.numeric(tsites)){
   timetodel<-ifelse( as.numeric(sample$closesttsite)-i==0,sample$date - NPL$deleteDate[i],timetodel)
   tgdel<-ifelse(sample[[paste0('dist_to_site_',i)]]<dcut& as.numeric(sample$closesttsite)-i==0,1,tgdel)
   cdel<-ifelse(sample[[paste0('dist_to_site_',i)]]>30000& as.numeric(sample$closesttsite)-i==0,1,cdel)
-
+  
 }
 sample$postdel<-postdel
 sample$timetodel<-timetodel
@@ -531,7 +531,7 @@ for(i in 1:dim(NPL)[1]){
   postprop<-ifelse(sample$date - NPL$proposalDate[i]>0 & as.numeric(sample$closesttsite)-i==0,1,postprop)
   postfin<-ifelse(sample$date - NPL$finalDate[i]>0 & as.numeric(sample$closesttsite)-i==0,1,postfin)
   postcc<-ifelse(sample$date - NPL$ccDate[i]>0 & as.numeric(sample$closesttsite)-i==0,1,postcc)
- 
+  
 }
 sample$postprop<-postprop
 sample$postfin<-postfin
@@ -558,403 +558,324 @@ saveRDS(sample, file = paste(path,'repeatpr5.rds', sep=""), ascii = FALSE, versi
 ###########################################################################################################################
 ###########################################################################################################################
 ###########################################################################################################################
-sample<-readRDS(paste(path,'repeatpr5.rds', sep=""), refhook = NULL)
-NPL<-readRDS(paste(path,'NPLfull.rds', sep=""), refhook = NULL)
 
-NPL<-NPL[NPL$rstate_code=="NY",]
-#NPLct<-NPL[NPL$rstate_code=="CT",]
-#NPLvt<-NPL[NPL$rstate_code=="VT",]
-#NPLma<-NPL[NPL$rstate_code=="MA",]
-#NPLpa<-NPL[NPL$rstate_code=="PA",]
+## Preliminaries
+rm(list=ls())
+gc()
 
-#NPL<-rbind(NPLny,NPLct,NPLvt,NPLma,NPLpa)
-pNPL<-subset(NPL,rat_name=="PROPOSAL TO NPL")
-fNPL<-subset(NPL,rat_name=="FINAL LISTING ON NPL")
-dNPL<-subset(NPL,rat_name=="DELETION FROM NPL"|rat_name=="PARTIAL NPL DELETION")
-pdNPL<-subset(NPL,rat_name=="PARTIAL NPL DELETION")
+# Change working directory to where you've stored ZTRAX
+path<- "P:/Peter/Hedonics/Groundwater/"
+path2<- "P:/Peter/Hedonics/"
 
-opNPL<- pNPL#[order(pNPL$date),] 
-ofNPL<- fNPL#[order(fNPL$date),] 
-odNPL<- dNPL#[order(dNPL$date),] 
-opdNPL<- dNPL#[order(pdNPL$date),] 
-
-deletedCompletion<-c("ControlsComplete")#,
-#"GroundwaterEngComplete","InstControlsComplete","GroundwaterComplete","EngControlsComplete")
-
-finalInstitutional<-c("HealthAdvisory","GroundwaterUseRegulation","DeedNotices","DeedRestriction",
-                      "NoticestoStateRegulators",
-                      "DrinkingWaterAdvisory","WaterSupplyUseRestriction","AccessRestriction")
-deletedContaminant<-c("gw","a","n")
-
-d.sample.data<-sample
-
-#myvars <- names(d.sample.data) %in% c("Intercept") 
-#d.sample.data <- d.sample.data[!myvars]
-
-for(i in 1:40){
-  d.sample.data[[paste0("binsqfeet",i)]]<-ifelse(d.sample.data$sqfeet-(i*250)<=0 & d.sample.data$sqfeet-((i-1)*250)>0,1,0 )
+## This function will check if a package is installed, and if not, install it
+pkgTest <- function(x) {
+  if (!require(x, character.only = TRUE))
+  {
+    install.packages(x, dep = TRUE)
+    if(!require(x, character.only = TRUE)) stop("Package not found")
+  }
 }
 
-for(i in 1:80){
-  d.sample.data[[paste0("binyearbuilt",i)]]<-ifelse(d.sample.data$YearBuilt-(2017-(i*5))>=0 & d.sample.data$YearBuilt-(2017-((i-1)*5))<0 ,1,0)
-}
-
-for(i in 1:7){
-  d.sample.data[[paste0("binBedroom",i)]]<-ifelse(d.sample.data$TotalBedrooms-((i))==0 ,1,0)
-}
-
-for(i in 1:3){
-  d.sample.data[[paste0("binStories",i)]]<-ifelse(d.sample.data$NoOfStories-((i))==0 ,1,0)
-}
-
-for(i in 1:17){
-  d.sample.data[[paste0("binRoom",i)]]<-ifelse(d.sample.data$TotalRooms-((i))==0 ,1,0)
-}
-
-for(i in 1:17){
-  d.sample.data[[paste0("binLotsize",i)]]<-ifelse(d.sample.data$LotSizeSquareFeet-(i*500)<=0 & d.sample.data$LotSizeSquareFeet-((i-1)*500)>0 ,1,0)
-}
+## These lines load the required packages
+packages <- c("readxl","matrixStats","matrixStats","MatchIt","Matching","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
+lapply(packages, pkgTest)
 
 
-#PropertyAddressCensusTractAndBlock.f. = factor(d.sample.data$PropertyAddressCensusTractAndBlock)
-#PropertyAddressCensusTractAndBlock.dummies = model.matrix(~PropertyAddressCensusTractAndBlock.f.)
-#d.sample.data<- cbind(d.sample.data,PropertyAddressCensusTractAndBlock.dummies)
+## These lines set several options
+options(scipen = 999) # Do not print scientific notation
+options(stringsAsFactors = FALSE) ## Do not load strings as factors
+options(max.print=1000000)
+memory.limit(10000000000000)
 
-saveRDS(d.sample.data, file = paste(path,'repeat5NYwells.rds', sep=""), ascii = FALSE, version = NULL,
+packages <- c("readxl","Hmisc","DescTools","qgam","quantreg","sphet","mgcv","McSpatial","pastecs","rdd","Matrix","psych","xtable","splines","ck37r","data.table","matrixStats","tmle","xgboost", "MatchIt","gtools","statar","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
+lapply(packages, pkgTest)
+packages <- c("readxl","Hmisc","grf","classInt","RColorBrewer","rgdal","DescTools","qgam","quantreg","sphet","mgcv","McSpatial","pastecs","rdd","Matrix","psych","xtable","splines","ck37r","data.table","matrixStats","tmle","xgboost", "MatchIt","gtools","statar","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
+lapply(packages, pkgTest)
+
+
+#Shape file
+cblock <- readOGR("P:/Peter/Hedonics/Groundwater/census","tl_2010_36_tabblock10")
+cblock <- spTransform(cblock,"+proj=longlat +datum=WGS84")
+cbg <- readOGR("P:/Peter/Hedonics/Groundwater/census","tl_2010_36_bg10")
+cbg <- spTransform(cbg,"+proj=longlat +datum=WGS84")
+ctract <- readOGR("P:/Peter/Hedonics/Groundwater/census","tl_2010_36_tract10")
+ctract <- spTransform(ctract,"+proj=longlat +datum=WGS84")
+
+
+NPL<-readRDS(paste(path,'NPLfullny.rds', sep=""), refhook = NULL)
+
+sample<-readRDS(paste(path,'repeatpr5.rds', sep=""),refhook = NULL)
+
+samplefull<-sample
+
+samplefull$la<-samplefull$PropertyAddressLatitude
+samplefull$lo<-samplefull$PropertyAddressLongitude
+cblock$block <-as.numeric(as.character(cblock$GEOID10))
+cbg$bg<-as.numeric(as.character(cbg$GEOID10))
+ctract$tract<-as.numeric(as.character(ctract$GEOID10))
+lmat <- samplefull[,c("lo","la")]
+spdata <- SpatialPointsDataFrame(lmat,lmat)
+proj4string(spdata) <- "+proj=longlat +datum=WGS84"
+samplefull$ctr <- over(spdata,ctract)$tract
+samplefull$cbg <- over(spdata,cbg)$bg
+samplefull$cbl <- over(spdata,cblock)$block
+
+saveRDS(samplefull, file = paste(path,'fullcen.rds', sep=""), ascii = FALSE, version = NULL,
         compress = TRUE, refhook = NULL)
-
-#colMeans(sample[,2667:2725])
-#odNPL[odNPL$date>"2013-01-01",]
-sample<-readRDS(paste(path,'repeat5NYwells.rds', sep=""), refhook = NULL)
-sampleout<-sample
-
-sample$day<-as.numeric(sample$date)
-fmmatdf<-as.formula(~TransId+ date + treatmentgroup+ YearBuilt + NoOfStories + sqfeet)
-fmmatch<-as.formula(treatmentgroup ~ date+ YearBuilt + NoOfStories+  sqfeet)
-#psite<-c("209","210","217","228")
-#for(j in deletedContaminant){ 
-j<-"gw"
-for(i in 1:dim(odNPL)[1]){
-  #i<-9
-  sample$treatmentgroup<-sampleout[[paste0('treatgroupd',j,i)]] 
-  sample$treatdgw<-sampleout[[paste0('treatd',j,i)]] 
-  #sample[[paste0('treatmentgroup',j)]][is.na(sample[[paste0('treatmentgroup',j)]])]<-0
-  sample$control<-ifelse(sampleout[[paste0('control',i)]] ==1 & sampleout[[paste0('dNPL',i)]]<100000 & sampleout[[paste0('dNPL',i)]]>30000,1,0)
-  if(mean(sample$treatmentgroup)>0 & mean(sample$control)>0 &mean(sample[[paste0('treatd',j,i)]])>0){
-    sample1<-subset(sample, treatmentgroup==1 | control ==1)
-    
-    
-    saveRDS(sample1, file = paste(path,'fulldeletionbaj',j,i,'.rds', sep=""), ascii = FALSE, version = NULL,
-            compress = TRUE, refhook = NULL)
-    
-    
-  }
-}
-#}
-
-
-
-
-
-
-#############################################################################
-#potential sites
-
-
-expandingList <- function(capacity = 10) {
-  buffer <- vector('list', capacity)
-  length <- 0
-  
-  methods <- list()
-  
-  methods$double.size <- function() {
-    buffer <<- c(buffer, vector('list', capacity))
-    capacity <<- capacity * 2
-  }
-  
-  methods$add <- function(val) {
-    if(length == capacity) {
-      methods$double.size()
-    }
-    
-    length <<- length + 1
-    buffer[[length]] <<- val
-  }
-  
-  methods$as.list <- function() {
-    b <- buffer[0:length]
-    return(b)
-  }
-  
-  methods
-}
-
-psites<-expandingList()
-sample<-NULL
-for(k in c("full")){
-  for(i in 1:dim(odNPL)[1]){
-    #k<-"full"
-    #i<-73
-    if (file.exists(paste(path,k,'deletionbajgw',i,'.rds', sep=""))){
-      sample.1<-readRDS(paste(path,k,'deletionbajgw',i,'.rds', sep=""), refhook = NULL)
-      print(paste0(k,"and",i,"sample size = ", dim(sample.1)))
-      print(paste0(k,"and",i,"treatment group = ", dim(sample.1[sample.1$treatmentgroup>0,])[1]))
-      print(paste0(k,"and",i,"treated = ", dim(sample.1[sample.1$treatdgw>0,])[1]))
-      print(paste0(k,"and",i,"control = ", dim(sample.1[sample.1$control>0,])[1]))
-      sample.1$treatgwWL<- sample.1$treatdgw * sample.1$WaterStndCode.fWL
-      print(paste0(k,"and",i,"treat well = ", dim(sample.1[sample.1$treatgwWL>0,])[1]))
-      sample.1$treatgwMU<- sample.1$treatdgw * sample.1$WaterStndCode.fMU
-      print(paste0(k,"and",i,"treat public = ", dim(sample.1[sample.1$treatgwMU>0,])[1]))
-      cut<-500
-      if(dim(sample.1[sample.1$treatgwWL>0,])[1]-cut>0 & dim(sample.1[sample.1$treatgwMU>0,])[1]-cut>0 &
-         dim(sample.1[sample.1$control>0,])[1]-cut>0 & 
-         dim(sample.1)[1]-dim(sample.1[sample.1$control>0,])[1]-dim(sample.1[sample.1$treatdgw>0,])[1]-cut>0){
-        psites$add(paste0("site",i))
-        #sample<-rbind(sample,sample.1)
-      }
-      
-      
-    }
-  }
-}
-psites$as.list()
-
-saveRDS(psites$as.list(), file = paste(path,'repeat5wellslist.rds', sep=""), ascii = FALSE, version = NULL,
-        compress = TRUE, refhook = NULL)
-
-psitelist<-readRDS(paste(path,'repeat5wellslist.rds', sep=""), refhook = NULL)
 ###############################################################################################
 
 
+sample<-readRDS(paste(path,'fullcen.rds', sep=""),refhook = NULL)
+NPL<-readRDS(paste(path,'NPLfullny.rds', sep=""), refhook = NULL)
 
-
-
-
-for(j in 1:dim(odNPL)[1]){
-  sample$treatmentgroup<-sampleout[[paste0('treatgroupdgw',j)]]  
-  #sample[[paste0('treatmentgroup',j)]][is.na(sample[[paste0('treatmentgroup',j)]])]<-0
-  sample$control<-ifelse(sampleout$control==1 & sampleout[[paste0('dNPL',j)]]<100000 & sampleout[[paste0('dNPL',j)]]>20000,1,0)
-  if(mean(sample$treatmentgroup)>0 & mean(sample$control)>0){
-    sample1<-subset(sample, treatmentgroup==1 | control ==1)
-    #sample1$treatmentgroup<-sample1[[paste0('treatmentgroup',j)]]
-    
-    sample1[[paste0('timeFE',j)]]<-ifelse(sample1$date-odNPL$date[j]>0 & odNPL$gw[j]==1,1,0)
-    sample.df<-data.frame(model.matrix(fmmatdf,sample1))
-    
-    saveRDS(sample1, file = paste(path,'fulldeletion',j,'.rds', sep=""), ascii = FALSE, version = NULL,
-            compress = TRUE, refhook = NULL)
-    
-    sample.m.df<-subset(sample.df, as.numeric(date-min(sample.df$date[sample.df$treatmentgroup==1]))>0)
-    if(FALSE){
-      mdm<- matchit(fmmatch,data = sample.m.df, method = "nearest", distance = "mahalanobis")
-      
-      mdm.treat <- match.data(mdm, group = "treat")
-      mdm.control <- match.data(mdm, group = "control")
-      mdm<-rbind(mdm.treat,mdm.control)
-      mdm<-mdm[,c("TransId","date")]
-      mdm.full<-merge(mdm,sample1,all.x = TRUE, by = "TransId")
-      
-      saveRDS(mdm.full , file = paste(path,'mdmdeletion',j,'.rds', sep=""), ascii = FALSE, version = NULL,
-              compress = TRUE, refhook = NULL)
-      
-      lm<-lm(fmmatch,sample.m.df)
-      
-      psm<- matchit(treatmentgroup~ lm$fitted.values,data = sample.m.df, method = "nearest", distance = "mahalanobis")
-      
-      psm.treat <- match.data(psm, group = "treat")
-      psm.control <- match.data(psm, group = "control")
-      psm<-rbind(psm.treat,psm.control)
-      psm<-psm[,c("TransId","date")]
-      psm.full<-merge(psm,sample1,all.x = TRUE, by = "TransId")
-      
-      saveRDS(psm.full , file = paste(path,'psmdeletion',j,'.rds', sep=""), ascii = FALSE, version = NULL,
-              compress = TRUE, refhook = NULL)
-    }
-  }
+#i<-tracts[2]
+tracts<-names(table(sample$ctr))
+sample2<-data.table(sample)
+for(i in tracts){
+gc()
+sample1<-sample[as.numeric(sample$ctr)-as.numeric(i)==0,]
+ud<-!duplicated(sample1[,c("date","HHID")])
+sample1<-sample1[ud,]
+sample1<-sample1[!is.na(sample1$ctr),]
+d.sample.data<-sample1[,c("date","HHID","TransId","price","logprice")]
+rep.row<-function(x,n){
+  matrix(rep(x,each=n),nrow=n)
 }
+D<-rep.row(as.numeric(d.sample.data$HHID),nrow(d.sample.data))
+D<-t(D)-D
+D[D>0]<-2
+D[D<0]<-2
+D[D==0]<-1
+D[D==2]<-0
+sameHouse<-D
 
-for(j in deletedCompletion){
-  for(i in 1:dim(odNPL)[1]){
-    sample$treatmentgroup<-sampleout[[paste0('treat',j,i)]]+sampleout[[paste0('pretreat',j,i)]]  
-    sample$control<-ifelse(sampleout$control==1 & sampleout[[paste0('dNPL',i)]]<150000 & sampleout[[paste0('dNPL',i)]]>20000,1,0)
-    if(mean(sample$treatmentgroup)>0 & mean(sample$control)>0){
-      sample1<-subset(sample, treatmentgroup==1 | control ==1)
-      #sample1$treatmentgroup<-sample1[[paste0('treatmentgroup',j,i)]]
-      
-      
-      sample1[[paste0('timeFE',j,i)]]<-ifelse(sample1$date-odNPL$date[i]>0 & odNPL$gw[i]==1,1,0)
-      
-      sample.df<-data.frame(model.matrix(fmmatdf,sample1))
-      
-      saveRDS(sample1, file = paste(path,'full',j,i,'.rds', sep=""), ascii = FALSE, version = NULL,
-              compress = TRUE, refhook = NULL)
-      
-      sample.m.df<-subset(sample.df, as.numeric(date-min(sample.df$date[sample.df$treatmentgroup==1]))>0)
-      if(FALSE){
-        mdm<- matchit(fmmatch,  data = sample.m.df, method = "nearest", distance = "mahalanobis")
-        
-        mdm.treat <- match.data(mdm, group = "treat")
-        mdm.control <- match.data(mdm, group = "control")
-        mdm<-rbind(mdm.treat,mdm.control)
-        mdm<-mdm[,c("TransId","date")]
-        
-        mdm.full<-merge(mdm,sample1,all.x = TRUE, by = "TransId")
-        
-        saveRDS(mdm.full , file = paste(path,'mdm',j,i,'.rds', sep=""), ascii = FALSE, version = NULL,
-                compress = TRUE, refhook = NULL)
-        lm<-lm(fmmatch,sample.m.df)
-        
-        psm<- matchit(treatmentgroup~ lm$fitted.values,data = sample.m.df, method = "nearest", distance = "mahalanobis")
-        
-        psm.treat <- match.data(psm, group = "treat")
-        psm.control <- match.data(psm, group = "control")
-        psm<-rbind(psm.treat,psm.control)
-        psm<-psm[,c("TransId","date")]
-        psm.full<-merge(psm,sample1,all.x = TRUE, by = "TransId")
-        
-        saveRDS(psm.full , file = paste(path,'psm',j,i,'.rds', sep=""), ascii = FALSE, version = NULL,
-                compress = TRUE, refhook = NULL)
+D<-rep.row(as.numeric(d.sample.data$TransId),nrow(d.sample.data))
+
+D<-t(D)-D
+D[D>0]<-2
+D[D<0]<-2
+D[D==0]<-1
+D[D==2]<-0
+sameSale<-D
+
+otherSales<-sameHouse-sameSale
+rm(sameHouse,sameSale)
+gc()
+D<-rep.row(d.sample.data$date,nrow(d.sample.data))
+D<-t(D)-D
+D[D<0]<-0
+diffDates<-D
+rm(D)
+gc()
+
+library(matrixStats)
+dumDiffDates<-diffDates*otherSales
+dumDiffDates[dumDiffDates==0]<- 10000000000000000
+#dumDiffDates[dumDiffDates-rowMins(dumDiffDates)>0]<- -1
+dumDiffDates[dumDiffDates-rowMins(dumDiffDates,na.rm = TRUE)==0]<-1
+dumDiffDates[dumDiffDates<0]<-0
+dumDiffDates[dumDiffDates>1]<-0
+dumDiffDates[dumDiffDates==10000000000000000]<-0
+dumDiffDates[rowSums(dumDiffDates)-dim(dumDiffDates)[1]==0]<-0
+rm(diffDates,otherSales)
+gc()
+
+
+d.sample.data$preprice<-dumDiffDates%*%d.sample.data$price
+d.sample.data$prelogprice<-dumDiffDates%*%d.sample.data$logprice
+d.sample.data$predate<-dumDiffDates%*%as.numeric(d.sample.data$date)
+d.sample.data$prediffdate<-as.numeric(d.sample.data$date)-d.sample.data$predate
+
+
+d.sample.data<-data.table(d.sample.data)
+if(i ==tracts[1]){
+  samplepre<-d.sample.data
+}
+if(i !=tracts[1]){
+  samplepre<-rbind(samplepre, d.sample.data, fill = TRUE)
+}
+#sample2<-sample
+
+
+print(i)
+}
+sample2<-merge(sample2,samplepre[,c("date","HHID","TransId",
+                                        "preprice","prelogprice","predate","prediffdate")],
+               by = c("TransId","date","HHID"),all.x=TRUE)       
+sample2<-sample2[preprice>0,]
+
+saveRDS(sample2, file = paste0(path,'baj.rds'), ascii = FALSE, version = NULL,
+        compress = TRUE, refhook = NULL)
+###############################################
+sample<-sample2
+
+if(TRUE){
+  
+  treatc<-treatl[[1]]
+  #for(ll in 1:length(laglead)){
+  
+  dic<-dist[[1]]
+  ll<-1
+  llc<-laglead[[ll]]
+  sample<-samplefull[samplefull[[paste0('dist',dic)]]>0,]
+  #sample$treatst<-sample$treatst-sample$presstatusd
+  #sample<-sample[treatst>0,]
+  #sample<-sample[presstatusd==0,]
+  upper.spatial.range<-c(20)
+  lower.spatial.range<-c(0)
+  spatial.power.range<-c(10)
+  temporal.cut.range<-c(30)
+  temporal.power.range<-c(10)
+  
+  urange<-upper.spatial.range
+  lrange<-lower.spatial.range
+  prange<-spatial.power.range
+  crange<-temporal.cut.range
+  qrange<-temporal.power.range
+  
+  d.sample.data<-sample
+  W.trend.lag.variables<-function(urange,lrange,prange,crange,qrange,path){
+    
+    
+    denom<-0 
+    for(c in crange){
+      for(q in qrange){
+        denom<-denom+1
+      }
+    }   
+    for(u in urange){
+      for(l in lrange){
+        for(p in prange){
+          if(u>l){
+            denom<-denom+1
+          }
+          
+        }
       }
     }
-  }
-}
-for(j in finalInstitutional){
-  for(i in 1:dim(ofNPL)[1]){
-    sample$treatmentgroup<-sampleout[[paste0('treat',j,i)]]+sampleout[[paste0('pretreat',j,i)]]  
-    sample$control<-ifelse(sampleout$control==1 & sampleout[[paste0('fNPL',i)]]<150000 & sampleout[[paste0('fNPL',i)]]>20000,1,0)
-    if(mean(sample$treatmentgroup)>0 & mean(sample$control)>0){
-      sample1<-subset(sample, treatmentgroup==1 | control ==1)
-      #sample1$treatmentgroup<-sample1[[paste0('treatmentgroup',j,i)]]
-      
-      sample1[[paste0('timeFE',j,i)]]<-ifelse(sample1$date-ofNPL$date[i]>0 & ofNPL$gw[i]==1,1,0)
-      
-      sample.df<-data.frame(model.matrix(fmmatdf,sample1))
-      
-      saveRDS(sample1, file = paste(path,'full',j,i,'.rds', sep=""), ascii = FALSE, version = NULL,
-              compress = TRUE, refhook = NULL)
-      
-      sample.m.df<-subset(sample.df, as.numeric(date-min(sample.df$date[sample.df$treatmentgroup==1]))>0)
-      if(FALSE){
-        mdm<- matchit(fmmatch,data = sample.m.df, method = "nearest", distance = "mahalanobis")
+    
+    
+    dist.mat<-distm (cbind(d.sample.data$PropertyAddressLongitude, d.sample.data$PropertyAddressLatitude), fun = distHaversine)
+    
+    Wtime<- function(c,q){  
+      t<-d.sample.data$predate
+      rep.row<-function(x,n){
+        matrix(rep(x,each=n),nrow=n)
+      }
+      t<-d.sample.data$predate
+      T1<-rep.row(t,nrow(d.sample.data))
+      T2<-T1
+      T1<-t(T1)
+      Tdp<-t(t(T1-T2))
+      Tdp[Tdp >= c*365] = -2
+      Tdp[Tdp<=-365] = -2
+      Wtp<-1/(1+abs(Tdp))
+      Wtp[Wtp<0]<-0
+      #Wtp[Wtp == 'Inf'] = 0
+      Wt<-Wtp^q
+      Wt<-return(Wt)
+      print(Wt)
+      rm(t,T1,T2,Tdp,Wtp)
+      gc()
+    }
+    
+    
+    num<-0
+    for(c in crange){
+      for(q in qrange){
         
-        mdm.treat <- match.data(mdm, group = "treat")
-        mdm.control <- match.data(mdm, group = "control")
-        mdm<-rbind(mdm.treat,mdm.control)
-        mdm<-mdm[,c("TransId","date")]
-        
-        mdm.full<-merge(mdm,sample1,all.x = TRUE, by = "TransId")
-        
-        saveRDS(mdm.full , file = paste(path,'mdm',j,i,'.rds', sep=""), ascii = FALSE, version = NULL,
-                compress = TRUE, refhook = NULL)
-        
-        lm<-lm(fmmatch,sample.m.df)
-        
-        psm<- matchit(treatmentgroup~ lm$fitted.values,data = sample.m.df, method = "nearest", distance = "mahalanobis")
-        
-        psm.treat <- match.data(psm, group = "treat")
-        psm.control <- match.data(psm, group = "control")
-        psm<-rbind(psm.treat,psm.control)
-        psm<-psm[,c("TransId","date")]
-        psm.full<-merge(psm,sample1,all.x = TRUE, by = "TransId")
-        
-        saveRDS(psm.full , file = paste(path,'psm',j,i,'.rds', sep=""), ascii = FALSE, version = NULL,
-                compress = TRUE, refhook = NULL)
+        assign(paste('wt',c,'m',q,sep=""),Wtime(c,q))
+        num<-num+1
+        print(paste(num, 'of', denom,sep=" "))
       }
     }
-  }
-}
-
-psitel<-c(2,4,11,12,15,16,19,20,21)
-psitel<-c(2,12,15,16)
-
-psitel<-c(2,15,16)
-
-#psite<-2
-for(psite in psitel){
-  data<-readRDS(paste(path,'fulldeletionbajgw',psite,'.rds', sep=""), refhook = NULL)
-  
-  #repeat sales Bajari
-  #d.sample.data<-sample1
-  #rm(sample1)
-  
-  gc()
-  data<-data[data$price>0,]
-  data<-data[!duplicated(data[,c("date","HHID")]),]
-  sample.data<-data[,c("date","HHID","TransId","price","logprice")]
-  quants<-20
-  sample.data$indx<- factor(as.numeric(cut2(as.numeric(sample.data$HHID), g=quants)))
-  sample<-NULL
-  for(i in 1:quants){
-    #i<-1
-    d.sample.data<-sample.data[indx==i,]
+    
+    
+    Wspat<- function(u,l,p){  
+      
+      Sp<-dist.mat
+      Sp[Sp>= u*500] = -2
+      Sp[Sp <= l*500] = -2
+      Wsp<-1/(1+Sp)
+      Wsp[Wsp<0]<-0
+      #Wsp[Wsp == 'Inf'] = 0
+      Ws<-Wsp^p
+      Ws<-return(Ws)
+      print(Ws)
+      rm(Sp,Wsp)
+      gc()
+    }
+    
+    
+    
+    for(u in urange){
+      
+      for(l in lrange){
+        for(p in prange){
+          assign(paste('ws',u,'m',l, 'm',p,sep=""),Wspat(u,l,p))
+          if(u>l){
+            num<-num+1
+            print(paste(num,'of',denom,sep=" "))
+          }
+          else{num<-num}
+        }
+      }
+    }
+    
+    #Dummies
     
     rep.row<-function(x,n){
       matrix(rep(x,each=n),nrow=n)
     }
-    D<-rep.row(as.numeric(d.sample.data$HHID),nrow(d.sample.data))
-    D<-t(D)-D
-    D[D>0]<-2
-    D[D<0]<-2
-    D[D==0]<-1
-    D[D==2]<-0
-    sameHouse<-D
+    if(FALSE){
+      A<-rep.row(d.sample.data$YearBuilt,nrow(d.sample.data))
+      At<-t(A)
+      D<-At-A
+      D[D<10000000000]<-1
+      D1<-D
+    }
     
-    D<-rep.row(as.numeric(d.sample.data$TransId),nrow(d.sample.data))
+    Wst<-hadamard.prod(get(paste('ws',u,'m',l, 'm',p,sep="")), get(paste('wt',c,'m',q,sep="")))
+    #Wst<-Wst*get(paste('D',d, sep=""))
+    weight<-rowSums(Wst)
+    for(i in 1:nrow(d.sample.data)){
+      if(weight[i]==0){
+        weight[i]<-1
+      }
+    }
+    Wst<-Wst*(1/weight)
     
-    D<-t(D)-D
-    D[D>0]<-2
-    D[D<0]<-2
-    D[D==0]<-1
-    D[D==2]<-0
-    sameSale<-D
-    
-    otherSales<-sameHouse-sameSale
-    rm(sameHouse,sameSale)
-    gc()
-    D<-rep.row(d.sample.data$date,nrow(d.sample.data))
-    D<-t(D)-D
-    D[D<0]<-0
-    diffDates<-D
-    rm(D)
-    gc()
-    
-    library(matrixStats)
-    dumDiffDates<-diffDates*otherSales
-    dumDiffDates[dumDiffDates==0]<- 10000000000000000
-    #dumDiffDates[dumDiffDates-rowMins(dumDiffDates)>0]<- -1
-    dumDiffDates[dumDiffDates-rowMins(dumDiffDates,na.rm = TRUE)==0]<-1
-    dumDiffDates[dumDiffDates<0]<-0
-    dumDiffDates[dumDiffDates>1]<-0
-    dumDiffDates[dumDiffDates==10000000000000000]<-0
-    dumDiffDates[rowSums(dumDiffDates)-dim(dumDiffDates)[1]==0]<-0
-    rm(diffDates,otherSales)
-    gc()
+    #diag(Wst)<-0
+    #Wst<-mat2listw(Wst, style="W")
+    sample[[paste0('lagu',u,'l',l, 'sp',p,'c',c, 'tp',q,sep="")]]<-Wst %*% sample$price
+    sample[[paste0('lnlagu',u,'l',l, 'sp',p,'c',c, 'tp',q,sep="")]]<-Wst %*%sample$logprice
     
     
-    d.sample.data$preprice<-dumDiffDates%*%d.sample.data$price
-    d.sample.data$prelogprice<-dumDiffDates%*%d.sample.data$logprice
+    saveRDS(sample, file = path, ascii = FALSE, version = NULL,
+            compress = TRUE, refhook = NULL)
+    #stop cluster
     
-    d.sample.data$predate<-dumDiffDates%*%as.numeric(d.sample.data$date)
-    d.sample.data$prediffdate<-as.numeric(d.sample.data$date)-d.sample.data$predate
-    d.sample.data$presstatusd<-ifelse(d.sample.data$predate-as.numeric(odNPL$date[i])>0,1,0)
-    d.sample.data$presstatuscc<-ifelse(d.sample.data$predate-as.numeric(odNPL$ControlsComplete[i])>0,1,0)
-    
-    
-    d.sample.data<-d.sample.data[d.sample.data$predate>0,]
-    #sample1<-sample1[sample1$presstatus<1 ,]
-    #sample1<-sample1[sample1$treatdgw<1 ,]
-    
-    
-    d.sample.data$difflogprice<-d.sample.data$logprice-d.sample.data$prelogprice
-    
-    sample<-rbind(sample,d.sample.data)
   }
-  library(data.table)
-  data.dt<-data.table(data)
-  sample.dt<-data.table(sample)
-  sample.new<-merge(data.dt,sample.dt,all.x=TRUE,by="TransId")
+  start.time <- Sys.time()
   
-  saveRDS(sample.new, file = paste(path,'fullbaj',psite,'.rds', sep=""), ascii = FALSE, version = NULL,
-          compress = TRUE, refhook = NULL)
+  W.trend.lag.variables(upper.spatial.range,lower.spatial.range,spatial.power.range,
+                        temporal.cut.range,temporal.power.range,paste0(path,"pretreatlag.rds"))
+  
+  end.time <- Sys.time()
+  time.taken <- end.time - start.time
+  time.taken
+  
+  
 }
 
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
