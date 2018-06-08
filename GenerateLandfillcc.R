@@ -521,7 +521,7 @@ sample$postdel<-postdel
 sample$timetodel<-timetodel
 sample$tgdel<-tgdel
 sample$cdel<-cdel
-sample<-sample[sample$tgdel|sample$cdel,]
+sample<-sample[sample$tgdel>0|sample$cdel>0,]
 #sample<-sample[sample$tgprop<2,]
 postprop<-rep(0,dim(sample)[1])
 postfin<-rep(0,dim(sample)[1])
@@ -549,8 +549,8 @@ sample$gwtgdel<- sample$tgdel * sample$WaterStndCode.fWL
 sample$mucdel<- sample$cdel* sample$WaterStndCode.fMU
 sample$mutgdel<- sample$tgdel * sample$WaterStndCode.fMU
 
-sample1<-sample[dist_to_site_min<10000,]
-sample1<-sample1[]
+#sample1<-sample[dist_to_site_min<10000,]
+#sample1<-sample1[]
 ## save
 saveRDS(sample, file = paste(path,'repeatpr5.rds', sep=""), ascii = FALSE, version = NULL,
         compress = TRUE, refhook = NULL)
@@ -707,18 +707,18 @@ sample2<-sample2[preprice>0,]
 saveRDS(sample2, file = paste0(path,'baj.rds'), ascii = FALSE, version = NULL,
         compress = TRUE, refhook = NULL)
 ###############################################
-sample<-sample2
 
-if(TRUE){
+
+NPL<-readRDS(paste(path,'NPLfullny.rds', sep=""), refhook = NULL)
+
+samplefull<-readRDS(paste(path,'baj.rds', sep=""),refhook = NULL)
+
+sitelist<-names(table(samplefull$closestsite))
+
+for(i in sitelist){
   
-  treatc<-treatl[[1]]
-  #for(ll in 1:length(laglead)){
-  
-  dic<-dist[[1]]
-  ll<-1
-  llc<-laglead[[ll]]
-  sample<-samplefull[samplefull[[paste0('dist',dic)]]>0,]
-  #sample$treatst<-sample$treatst-sample$presstatusd
+ sample<-samplefull[samplefull$closestsite==i,]
+ #sample$treatst<-sample$treatst-sample$presstatusd
   #sample<-sample[treatst>0,]
   #sample<-sample[presstatusd==0,]
   upper.spatial.range<-c(20)
@@ -859,7 +859,7 @@ if(TRUE){
   start.time <- Sys.time()
   
   W.trend.lag.variables(upper.spatial.range,lower.spatial.range,spatial.power.range,
-                        temporal.cut.range,temporal.power.range,paste0(path,"pretreatlag.rds"))
+                        temporal.cut.range,temporal.power.range,paste0(path,"pretreatlag",i".rds"))
   
   end.time <- Sys.time()
   time.taken <- end.time - start.time

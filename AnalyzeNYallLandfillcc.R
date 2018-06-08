@@ -33,7 +33,7 @@ memory.limit(10000000000000)
 
 NPL<-readRDS(paste(path,'NPLfull.rds', sep=""), refhook = NULL)
 
-sample<-readRDS(paste(path,'propsample.rds', sep=""),refhook = NULL)
+sample<-readRDS(paste(path,'baj.rds', sep=""),refhook = NULL)
 
 
 if(TRUE){
@@ -44,19 +44,19 @@ if(TRUE){
   laglead<-c("")
   llc<-laglead[1]
   treatl<-c('TATE','MUATE','WLATE')
-  
+  sitelist<-names(table(sample$closestsite))
   psite<-sitelist[1]
-  samplefull<-readRDS(paste(path,'baj.rds', sep=""), refhook = NULL)
-  samplefull<-samplefull[predate>0,]
-  samplefull$treatst<-ifelse(samplefull$time_to_del_closest*samplefull$tgprop >0,1,0)
+  samplefull<-sample
+  samplefull<-samplefull[preprice>0,]
+  samplefull$treatst<-ifelse(samplefull$postdel*samplefull$tgdel>0,1,0)
   buf<-1
   #samplefull$buffer<-ifelse(samplefull$date-odNPL$date[psite]+(buf*365)>0&samplefull$date-odNPL$date[psite]<0,1,0)
-  samplefull$buffer<-ifelse(abs(samplefull$time_to_del_closest)-(buf*365)<0,1,0)
+  samplefull$buffer<-ifelse(abs(samplefull$timetodel)-(buf*365)<0,1,0)
   samplefull<-samplefull[buffer<1,]
-  samplefull$delprocess<-ifelse(samplefull$time_to_del_closest<0 &samplefull$time_to_cc_closest>0,1,0)
+  samplefull$delprocess<-ifelse(samplefull$timetodel<0 &samplefull$postcc>0,1,0)
   samplefull<-samplefull[delprocess<1,]
-  samplefull$timetotreat<-samplefull$time_to_del_closest
-  samplefull$lsite<-samplefull$sfsite
+  samplefull$timetotreat<-samplefull$timetodel
+  samplefull$lsite<-samplefull$closestsite
   samplefull$demlogprice<-demeanlist(samplefull$logprice,
                                      list(as.factor(samplefull$PropertyAddressCensusTractAndBlock)))
   # sample$logprice<-sample$logprice.x
@@ -87,185 +87,7 @@ if(TRUE){
   samplefull<-samplefull[abs(timetotreat)-10<0,]
 
 }
-if(TRUE){
-  
-  treatc<-treatl[[1]]
-  #for(ll in 1:length(laglead)){
-  
-  dic<-dist[[1]]
-  ll<-1
-  llc<-laglead[[ll]]
-  sample<-samplefull[samplefull[[paste0('dist',dic)]]>0,]
-  #sample$treatst<-sample$treatst-sample$presstatusd
-  #sample<-sample[treatst>0,]
-  #sample<-sample[presstatusd==0,]
-  upper.spatial.range<-c(20)
-  lower.spatial.range<-c(0)
-  spatial.power.range<-c(10)
-  temporal.cut.range<-c(30)
-  temporal.power.range<-c(10)
-  
-  urange<-upper.spatial.range
-  lrange<-lower.spatial.range
-  prange<-spatial.power.range
-  crange<-temporal.cut.range
-  qrange<-temporal.power.range
-  
-  d.sample.data<-sample
-  W.trend.lag.variables<-function(urange,lrange,prange,crange,qrange,path){
-    
-    
-    denom<-0 
-    for(c in crange){
-      for(q in qrange){
-        denom<-denom+1
-      }
-    }   
-    for(u in urange){
-      for(l in lrange){
-        for(p in prange){
-          if(u>l){
-            denom<-denom+1
-          }
-          
-        }
-      }
-    }
-    
-    
-    dist.mat<-distm (cbind(d.sample.data$PropertyAddressLongitude, d.sample.data$PropertyAddressLatitude), fun = distHaversine)
-    
-    Wtime<- function(c,q){  
-      t<-d.sample.data$predate
-      rep.row<-function(x,n){
-        matrix(rep(x,each=n),nrow=n)
-      }
-      t<-d.sample.data$predate
-      T1<-rep.row(t,nrow(d.sample.data))
-      T2<-T1
-      T1<-t(T1)
-      Tdp<-t(t(T1-T2))
-      Tdp[Tdp >= c*365] = -2
-      Tdp[Tdp<=-365] = -2
-      Wtp<-1/(1+abs(Tdp))
-      Wtp[Wtp<0]<-0
-      #Wtp[Wtp == 'Inf'] = 0
-      Wt<-Wtp^q
-      Wt<-return(Wt)
-      print(Wt)
-      rm(t,T1,T2,Tdp,Wtp)
-      gc()
-    }
-    
-    
-    num<-0
-    for(c in crange){
-      for(q in qrange){
-        
-        assign(paste('wt',c,'m',q,sep=""),Wtime(c,q))
-        num<-num+1
-        print(paste(num, 'of', denom,sep=" "))
-      }
-    }
-    
-    
-    Wspat<- function(u,l,p){  
-      
-      Sp<-dist.mat
-      Sp[Sp>= u*500] = -2
-      Sp[Sp <= l*500] = -2
-      Wsp<-1/(1+Sp)
-      Wsp[Wsp<0]<-0
-      #Wsp[Wsp == 'Inf'] = 0
-      Ws<-Wsp^p
-      Ws<-return(Ws)
-      print(Ws)
-      rm(Sp,Wsp)
-      gc()
-    }
-    
-    
-    
-    for(u in urange){
-      
-      for(l in lrange){
-        for(p in prange){
-          assign(paste('ws',u,'m',l, 'm',p,sep=""),Wspat(u,l,p))
-          if(u>l){
-            num<-num+1
-            print(paste(num,'of',denom,sep=" "))
-          }
-          else{num<-num}
-        }
-      }
-    }
-    
-    #Dummies
-    
-    rep.row<-function(x,n){
-      matrix(rep(x,each=n),nrow=n)
-    }
-    if(FALSE){
-      A<-rep.row(d.sample.data$YearBuilt,nrow(d.sample.data))
-      At<-t(A)
-      D<-At-A
-      D[D<10000000000]<-1
-      D1<-D
-    }
-    
-    Wst<-hadamard.prod(get(paste('ws',u,'m',l, 'm',p,sep="")), get(paste('wt',c,'m',q,sep="")))
-    #Wst<-Wst*get(paste('D',d, sep=""))
-    weight<-rowSums(Wst)
-    for(i in 1:nrow(d.sample.data)){
-      if(weight[i]==0){
-        weight[i]<-1
-      }
-    }
-    Wst<-Wst*(1/weight)
-    
-    #diag(Wst)<-0
-    #Wst<-mat2listw(Wst, style="W")
-    sample[[paste0('lagu',u,'l',l, 'sp',p,'c',c, 'tp',q,sep="")]]<-Wst %*% sample$price
-    sample[[paste0('lnlagu',u,'l',l, 'sp',p,'c',c, 'tp',q,sep="")]]<-Wst %*%sample$logprice
-    
-    
-    saveRDS(sample, file = path, ascii = FALSE, version = NULL,
-            compress = TRUE, refhook = NULL)
-    #stop cluster
-    
-  }
-  start.time <- Sys.time()
-  
-  W.trend.lag.variables(upper.spatial.range,lower.spatial.range,spatial.power.range,
-                        temporal.cut.range,temporal.power.range,paste0(path,"pretreatlag.rds"))
-  
-  end.time <- Sys.time()
-  time.taken <- end.time - start.time
-  time.taken
-  
-  
-}
 
-if(TRUE){
-  samplefull<-readRDS(paste0(path,"pretreatlag.rds")
-                      , refhook = NULL)
-  
-  
-  samplefull$la<-samplefull$PropertyAddressLatitude
-  samplefull$lo<-samplefull$PropertyAddressLongitude
-  cblock$block <-as.numeric(as.character(cblock$GEOID10))
-  cbg$bg<-as.numeric(as.character(cbg$GEOID10))
-  ctract$tract<-as.numeric(as.character(ctract$GEOID10))
-  lmat <- samplefull[,c("lo","la")]
-  spdata <- SpatialPointsDataFrame(lmat,lmat)
-  proj4string(spdata) <- "+proj=longlat +datum=WGS84"
-  samplefull$ctr <- over(spdata,ctract)$tract
-  samplefull$cbg <- over(spdata,cbg)$bg
-  samplefull$cbl <- over(spdata,cblock)$block
-  
-  saveRDS(samplefull, file = paste(path,'fullcen.rds', sep=""), ascii = FALSE, version = NULL,
-          compress = TRUE, refhook = NULL)
-}
 
 dist<-c('10k','8k','6k','4k','2k')#,'1k','500m')
 
@@ -274,54 +96,11 @@ dist<-c('10k','8k','6k','4k','2k')#,'1k','500m')
 laglead<-c("")
 treatl<-c('TATE','MUATE','WLATE')
 #sample<-readRDS(paste0(path,"pretreatlag.rds"), refhook = NULL)
-sample<-readRDS(paste0(path,"fullcen.rds"), refhook = NULL)
+#sample<-readRDS(paste0(path,"fullcen.rds"), refhook = NULL)
 sample$treatmentgroup<-sample$tgdel
 samplefull<-sample
 quant<-10
 qcut<-cut2(samplefull$preprice, g=quant, onlycuts = TRUE)
-
-p <- ggplot(samplefull, aes(x=logprice, fill= as.character(treatmentgroup))) +
-  geom_density(alpha=.3) + 
-  xlab("Log Price") + 
-  ylab("Density")+
-  guides(fill=guide_legend(title="Treatment Group"))
-
-lp <- ggplot(samplefull, aes(x=prelogprice, fill= as.character(treatmentgroup))) +
-  geom_density(alpha=.3) + 
-  xlab("Pretreatment Log Price") + 
-  ylab("Density")+
-  guides(fill=guide_legend(title="Treatment Group"))
-
-sf <- ggplot(samplefull, aes(x=log(sqfeet), fill= as.character(treatmentgroup))) +
-  geom_density(alpha=.3) + 
-  xlab("Log(Square Feet)") + 
-  ylab("Density")+
-  guides(fill=guide_legend(title="Treatment Group"))
-
-da <- ggplot(samplefull, aes(x=as.Date(RecordingDate), fill= as.character(treatmentgroup))) +
-  geom_density(alpha=.5,adjust=2) + 
-  xlab("Date") + 
-  ylab("Density")+
-  guides(fill=guide_legend(title="Treatment Group"))
-
-yb <- ggplot(samplefull, aes(x=YearBuilt, fill= as.character(treatmentgroup))) +
-  geom_density(alpha=.5,adjust=2) + 
-  xlab("Year Built") + 
-  ylab("Density")+
-  guides(fill=guide_legend(title="Treatment Group"))
-
-fb <- ggplot(samplefull, aes(x=FullBath, fill= as.character(treatmentgroup))) +
-  geom_density(alpha=.5,adjust=2) + 
-  xlab("Full Bath") + 
-  ylab("Density")+
-  guides(fill=guide_legend(title="Treatment Group"))
-
-
-ls <- ggplot(samplefull, aes(x=LotSizeSquareFeet, fill= as.character(treatmentgroup))) +
-  geom_density(alpha=.5,adjust=2) + 
-  xlab("Full Bath") + 
-  ylab("Density")+
-  guides(fill=guide_legend(title="Treatment Group"))
 
 sumvar<-c("price","sqfeet","TotalRooms","YearBuilt","FullBath")
 ts<-sample[treatmentgroup==1,c("price","sqfeet","YearBuilt","RecordingDate","FullBath","LotSizeSquareFeet")]
