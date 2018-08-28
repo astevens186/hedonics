@@ -702,19 +702,19 @@ for(treat in  1:length(treatl)){
         
         samplen<-data.frame(sample)
         
-        if(TRUE){
+        if(dic="10k"){
           resid.ptlag<-felm(logprice~Xg|
                               as.factor(year):as.factor(quarter)+
                               as.factor(year):as.factor(preyear)+
                               #as.factor(ceiling(as.numeric(prediffdate)/90))+
                               #as.factor(ceiling(as.numeric(timetodel)/365))+
                               as.factor(preyear):as.factor(prequarter)+
-                              as.factor(cbg)|0|closestsite:year,sample,psdef=FALSE)
+                              as.factor(lsite)|0|closestsite:year,sample,psdef=FALSE)
           samplen$crdid<-resid.ptlag$residuals
           #sample$crdid<-sample$demlogprice-Xg[,-1]%*%coefdid
           #sample$crdid<-sample$crdid-mean(sample$crdid)
           samplen$post<-ifelse(samplen$timetotreat>0,1,0)
-          treatment <- aggregate(crdid ~ tgdel+as.factor(round(as.numeric(timetodel)/365,2)), data=samplen, FUN=mean, na.rm=TRUE)
+          treatment <- aggregate(crdid ~ tgdel+as.factor(year):as.factor(quarter), data=samplen, FUN=mean, na.rm=TRUE)
           names(treatment)[2]<-"timetotreat"
           names(treatment)[3]<-"crdid"
           treatment$timetotreat<-as.numeric(as.character(treatment$timetotreat))
