@@ -3,9 +3,11 @@
 
 ## Preliminaries
 rm(list=ls())
+gc()
 
 # Change working directory to where you've stored ZTRAX
 path<- "P:/Peter/Hedonics/Groundwater/"
+#path<- "P:/Peter/Hedonics/Groundwater10/"
 #install.packages("dplyr", repos = "http://mran.revolutionanalytics.com")
 ## This function will check if a package is installed, and if not, install it
 pkgTest <- function(x) {
@@ -19,7 +21,7 @@ pkgTest <- function(x) {
 ## These lines load the required packages
 packages <- c("readxl","Hmisc","DescTools","qgam","quantreg","sphet","mgcv","McSpatial","pastecs","rdd","Matrix","psych","xtable","splines","ck37r","data.table","matrixStats","tmle","xgboost", "MatchIt","gtools","statar","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
 lapply(packages, pkgTest)
-packages <- c("readxl","Hmisc","grf","classInt","RColorBrewer","rgdal","DescTools","qgam","quantreg","sphet","mgcv","McSpatial","pastecs","rdd","Matrix","psych","xtable","splines","ck37r","data.table","matrixStats","tmle","xgboost", "MatchIt","gtools","statar","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
+packages <- c("readxl","randomForestSRC","Hmisc","grf","classInt","RColorBrewer","rgdal","DescTools","qgam","quantreg","sphet","mgcv","McSpatial","pastecs","rdd","Matrix","psych","xtable","splines","ck37r","data.table","matrixStats","tmle","xgboost", "MatchIt","gtools","statar","foreign","multiwayvcov","lmtest","readstata13","xlsx", "data.table","doSNOW","parallel","compare","doParallel","devtools","foreach","spdep","reshape2","sm","plyr","utils","tcltk","geosphere", "matrixcalc", "dplyr","ExPosition", "randomForest","lfe", "hdm", "rdrobust", "stargazer", "ggplot2", "outliers","rpart","e1071")
 lapply(packages, pkgTest)
 
 ## These lines set several options
@@ -32,6 +34,8 @@ memory.limit(10000000000000)
 NPL<-readRDS(paste(path,'NPLfullny.rds', sep=""), refhook = NULL)
 
 sample<-readRDS(paste(path,'bajs.rds', sep=""),refhook = NULL)
+
+sample<-sample[sample$LotSizeSquareFeet>500,]
 
 if(TRUE){
   sample1<-sample
@@ -175,7 +179,8 @@ if(TRUE){
   #sample<-readRDS(paste0(path,"pretreatlag.rds"), refhook = NULL)
   #sample<-readRDS(paste0(path,"fullcen.rds"), refhook = NULL)
   sample1$age<-year(sample1$date)-sample1$YearBuilt
-  
+  sample1$preage<-year(as.Date(sample1$predate))-sample1$YearBuilt
+  sample1<-sample1[sample1$preage>=0,]
   #summary stats
   if(TRUE){
     sample<-sample1[age>=0]
@@ -228,18 +233,46 @@ if(TRUE){
                  type="latex", file=paste0(path,'latex/sumtab.tex'))
     
     #LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + sqfeet+day+prediffdate+predate
-    samplem<-sample[,c("date","tgdel","LotSizeSquareFeet","timetodel","min","closesttsite", "sqfeet","age","YearBuilt", "FullBath","predate","preprice","TransId","WaterStndCode.fWL")]
-  }
+      }
   
   ##MATCHING
-  if(FALSE){
-    mdm<- matchit(tgdel~date+sqfeet+LotSizeSquareFeet+YearBuilt+predate +preprice+min+FullBath+WaterStndCode.fWL,data=samplem,
+
+  if(FALSE) {
+    sample$oid<-1:nrow(sample)
+   
+     
+    samplem<-sample[,c("date","tgdel","LotSizeSquareFeet","timetodel",
+                       "min","closesttsite", "sqfeet","age","YearBuilt",
+                       "FullBath","predate","preprice","TransId","postdel","preage",
+                       "WaterStndCode.fWL","closesttsite","oid")]
+    
+    
+    ps<-glm(tgdel~date+sqfeet+LotSizeSquareFeet+YearBuilt+postdel+preage+
+              FullBath+WaterStndCode.fWL+age+ predate+ preprice+#min+
+              sqfeet+LotSizeSquareFeet+YearBuilt,data=samplem, family = binomial(link="logit"))
+    samplem$ps<-ps$fitted.values
+    i<-"1"
+    j<-1
+    samplem<-samplem[min<=10000,]
+    lmdmn<-as.matrix(samplem[1:2,c("oid")])
+    qm<-5
+    samplem$qmin<- factor(as.numeric(cut2(samplem$min,g=qm,minmax=TRUE)))
+
+    for(i in names(table(samplem$qm))){
+      
+      sampleml<-samplem[as.character(samplem$qmin)==i,]
+      #sampleml<-samplem[samplem$WaterStndCode.fWL==j,]
+      #date+ps+sqfeet+FullBath+WaterStndCode.fWL+
+      #YearBuilt+LotSizeSquareFeet+age +preprice
+    mdm<- matchit(tgdel~date+ps+sqfeet+FullBath+WaterStndCode.fWL+postdel+preage+
+                    YearBuilt+LotSizeSquareFeet+age +preprice,data=sampleml,
                   method = "nearest", distance = "mahalanobis", replace = TRUE,#discard=2,
                   nearest=TRUE,
-                  ratio=2, caliper= .1, 
-                  mahvars = c("date", "sqfeet","LotSizeSquareFeet","preprice"),
+                  ratio=2, caliper= .05, 
+                  #mahvars = c("age","ps","LotSizeSquareFeet","FullBath","WaterStndCode.fWL","YearBuilt", "sqfeet","preprice"),
+                  mahvars = c("ps"),
                   discard = "both")
-    plot(mdm)
+    #plot(mdm)
     print(mdm)
     summary(mdm)
     #old<-c("year.date.","sqfeet","LotSizeSquareFeet","YearBuilt", "FullBath","distance"),
@@ -249,59 +282,31 @@ if(TRUE){
     mdm.treat <- match.data(mdm, group = "treat")
     mdm.control <- match.data(mdm, group = "control")
     mdmn<-rbind(mdm.treat,mdm.control)
-    mdmn<-mdmn[,c("TransId","date")]
-    mdmn<-data.table(mdmn)
-    sample1$treatmentgroup<-sample1$tgdel
-    samplemerge<-data.table(sample1)
-    mdmf<-samplemerge[samplemerge$TransId %in% names(table(mdmn$TransId)),]
-    samplemerge$matched<-ifelse(samplemerge$TransId %in% names(table(mdmn$TransId)),1,0)
+    mdmn<-as.matrix(mdmn[,c("oid")])
+    lmdmn<-rbind(lmdmn,mdmn)
+    
+      }
+
+    mdmn<-data.table(lmdmn)
+    sample$treatmentgroup<-sample$tgdel
+    samplemerge<-data.table(sample)
+    mdmf<-merge(mdmn,samplemerge, by="oid",all.x = TRUE)
+    #mdmf<-samplemerge[samplemerge$TransId %in% names(table(mdmn$TransId)),]
+    samplemerge$matched<-ifelse(samplemerge$oid %in% names(table(mdmn$oid)),1,0)
     
     #sm<-samplemerge[,c("distance","date","sqfeet","LotSizeSquareFeet","YearBuilt","FullBath","age","predate","preprice","WaterStndCode.fWL")]
-    samplemerge$smtreat<-ifelse(samplemerge$TransId %in% names(table(mdm.treat$TransId)),TRUE,FALSE)
-    samplemerge$smcontrol<-ifelse(samplemerge$TransId %in% names(table(mdm.control$TransId)),TRUE,FALSE)
-    
-    if(TRUE){
-      loveplot <-
-        function (X_mat, t_id, c_id, v_line, legend_position = "topright",newnames) {
-          #X_mat<-cbind(X_mat,mdm)
-          colnames(X_mat)<-newnames
-          X_mat_t = X_mat[t_id, ]
-          X_mat_c_before = X_mat[!t_id, ]
-          X_mat_c_before_mean = apply(X_mat_c_before, 2, mean)
-          X_mat_t_mean = apply(X_mat_t, 2, mean)
-          X_mat_t_var = apply(X_mat_t, 2, var)
-          X_mat_c_before_var = apply(X_mat_c_before, 2, var)
-          std_dif_before = (X_mat_t_mean - X_mat_c_before_mean)/sqrt((X_mat_t_var + X_mat_c_before_var)/2)
-          X_mat_c_after = X_mat[c_id, ]
-          X_mat_c_after_mean = apply(X_mat_c_after, 2, mean)
-          std_dif_after = (X_mat_t_mean - X_mat_c_after_mean)/sqrt((X_mat_t_var + X_mat_c_before_var)/2)
-          #library("lattice")
-          abs_std_dif_before = std_dif_before
-          n_aux = length(abs_std_dif_before)
-          abs_std_dif_after = std_dif_after
-          dotchart(abs_std_dif_before[n_aux:1], labels = colnames(X_mat)[n_aux:1], cex = .9, 
-                   pch = "", color = , main = "", 
-                   xlim = c(min(std_dif_before), max(std_dif_before)), xlab = "Standardized differences in means")
-          points(abs_std_dif_before[n_aux:1], y = 1:ncol(X_mat), cex = 0.9, pch = 0)
-          points(abs_std_dif_after[n_aux:1], y = 1:ncol(X_mat), cex = 0.8, pch = 8, col = "blue")
-          legend(legend_position, c("Before matching", "After matching"), cex = .9, bty = "n", pch = c(0, 8), col = c("black", "blue"))
-          abline(v = v_line, lty = 2)
-          abline(v = -v_line, lty = 2)
-          abline(h=(dim(X_mat)[2]-.5), col="black")
-        }
-    }
-    
-    loveplot(sm, samplemerge$smtreat, samplemerge$smcontrol,
-             .2, legend_position = "topleft",newnames = colnames(sm))
+    #samplemerge$smtreat<-ifelse(samplemerge$TransId %in% names(table(mdm.treat$TransId)),TRUE,FALSE)
+    #samplemerge$smcontrol<-ifelse(samplemerge$TransId %in% names(table(mdm.control$TransId)),TRUE,FALSE)
+   
     
     #old<-c("year.date.","sqfeet","LotSizeSquareFeet","YearBuilt", "FullBath","distance"),
-    saveRDS(mdm.treat, file = paste0(path,'mtreat.rds'), ascii = FALSE, version = NULL,
+    saveRDS(mdmf, file = paste0(path,'msample.rds'), ascii = FALSE, version = NULL,
             compress = TRUE, refhook = NULL)
-    saveRDS(mdm.control, file = paste0(path,'mcontrol.rds'), ascii = FALSE, version = NULL,
-            compress = TRUE, refhook = NULL)
+
     saveRDS(samplemerge, file = paste0(path,'matchedsample.rds'), ascii = FALSE, version = NULL,
             compress = TRUE, refhook = NULL)
   }
+
   if(TRUE){
     if(TRUE){
       loveplot <-
@@ -335,48 +340,79 @@ if(TRUE){
     }
     
     samplemerge<-readRDS(paste(path,'matchedsample.rds', sep=""),refhook = NULL)
-    mdm.treat<-readRDS(paste(path,'mtreat.rds', sep=""),refhook = NULL)
-    mdm.control<-readRDS(paste(path,'mcontrol.rds', sep=""),refhook = NULL)
-    samplemerge<-samplemerge[age>=0,]
-    samplemerge$smtreat<-ifelse(samplemerge$TransId %in% names(table(mdm.treat$TransId)),TRUE,FALSE)
-    samplemerge$smcontrol<-ifelse(samplemerge$TransId %in% names(table(mdm.control$TransId)),TRUE,FALSE)
-    newnames <-c("Propensity Score","Year","Square Feet","Lot Size","Year Built", 
-                 "Bathrooms","Age","Date Last Sold","Price Last Sold","Wells")
-    
-    samplemerge$matched<-samplemerge$smtreat+samplemerge$smcontrol
-    ps<-glm(tgdel~sqfeet+LotSizeSquareFeet+YearBuilt+
-              FullBath+WaterStndCode.fWL+ predate+ preprice+
-              bs(sqfeet,5)+bs(LotSizeSquareFeet,5)+bs(YearBuilt,5),data=samplemerge, family = binomial(link="logit"))
+    msample<-readRDS(paste(path,'msample.rds', sep=""),refhook = NULL)
+
+    ps.m<-glm(tgdel~date+
+                sqfeet+#LotSizeSquareFeet+
+                YearBuilt+preage+
+                FullBath+age+ predate+ preprice,data=msample, family = binomial(link="logit"))
+    ps<-glm(tgdel~date+
+              sqfeet+#LotSizeSquareFeet+
+              YearBuilt+preage+
+              FullBath+age+ predate+ preprice,data=samplemerge, family = binomial(link="logit"))
     
     samplemerge$distance<-ps$fitted.values
-    sm<-samplemerge[,c("distance","date","sqfeet","LotSizeSquareFeet","YearBuilt","FullBath","age","predate","preprice","WaterStndCode.fWL")]
+    msample$distance<-ps.m$fitted.values
+    sam<-samplemerge[,c("distance","date","sqfeet","LotSizeSquareFeet","YearBuilt","FullBath","age","predate","preprice","preage","WaterStndCode.fWL")]
+    sam$date<-year(sam$date)
+    
+    sm<-msample[,c("distance","date","sqfeet","LotSizeSquareFeet","YearBuilt","FullBath","age","predate","preprice","preage","WaterStndCode.fWL")]
     sm$date<-year(sm$date)
+    newnames <-c("Propensity Score","Year","Square Feet","Lot Size","Year Built", 
+                 "Bathrooms","Age","Date Last Sold","Price Last Sold","Age Last Sold","Wells")
     
-    jpeg(file =paste0(path, "latex/loveplot2.jpeg"),width = 500, height = 500)
-    
-    loveplot(sm, samplemerge$smtreat, samplemerge$smcontrol,
-             .2, legend_position = "topleft",newnames = newnames)
-    dev.off()
-    
-    if(FALSE){
-      X_mat<-sm
+    if(TRUE){
+      X_mat<-as.matrix(sam)
       colnames(X_mat)<-newnames
-      t_id<-samplemerge$smtreat
-      X_mat_t = X_mat[t_id, ]
-      X_mat_c_before = X_mat[!t_id, ]
-      X_mat_c_before_mean = apply(X_mat_c_before, 2, mean)
-      X_mat_t_mean = apply(X_mat_t, 2, mean)
-      X_mat_t_var = apply(X_mat_t, 2, var)
-      X_mat_c_before_var = apply(X_mat_c_before, 2, var)
-      std_dif_before = (X_mat_t_mean - X_mat_c_before_mean)/sqrt((X_mat_t_var + X_mat_c_before_var)/2)
-      c_id<-samplemerge$smcontrol
-      X_mat_c_after = X_mat[c_id, ]
-      X_mat_c_after_mean = apply(X_mat_c_after, 2, mean)
-      std_dif_after = (X_mat_t_mean - X_mat_c_after_mean)/sqrt((X_mat_t_var + X_mat_c_before_var)/2)
-      #library("lattice")
-      abs_std_dif_before = std_dif_before
-      n_aux = length(abs_std_dif_before)
-      abs_std_dif_after = std_dif_after
+      X_mat_r<-as.matrix(sm)
+      colnames(X_mat_r)<-newnames
+      X_mat_t <- X_mat[samplemerge$tgdel==1, ]
+      X_mat_c_before <- X_mat[samplemerge$tgdel==0, ]
+      X_mat_c_before_mean <- apply(X_mat_c_before, 2, mean)
+      X_mat_t_mean <- apply(X_mat_t, 2, mean)
+      X_mat_t_var <- apply(X_mat_t, 2, var)
+      X_mat_c_before_var <- apply(X_mat_c_before, 2, var)
+      std_dif_before <- (X_mat_t_mean - X_mat_c_before_mean)/sqrt((X_mat_t_var + X_mat_c_before_var)/2)
+      i<-1
+      res_mat<-matrix(nrow=dim(X_mat)[1],ncol=dim(X_mat)[2])
+      for(i in 1:length(names(sam)[-1])){
+        c<-names(sam[,-1])[i]
+        res<-lm(as.formula(paste0(c,"~distance")),data = sam)
+        res_mat[,(1+i)]<-res$residuals
+      }
+      res_mat[,1]<-X_mat[,1]
+      res_mat_t <- res_mat[samplemerge$tgdel==1, ]
+      res_mat_c_before <- res_mat[samplemerge$tgdel==0, ]
+      res_mat_t_var <- apply(res_mat_t, 2, var)
+      res_mat_c_before_var <- apply(res_mat_c_before, 2, var)
+      ratio_var_before <- res_mat_t_var/res_mat_c_before_var
+      
+      X_mat_t <- X_mat_r[msample$tgdel==1, ]
+      X_mat_c_before <- X_mat_r[msample$tgdel==0, ]
+      X_mat_c_before_mean <- apply(X_mat_c_before, 2, mean)
+      X_mat_t_mean <- apply(X_mat_t, 2, mean)
+      X_mat_t_var <- apply(X_mat_t, 2, var)
+      X_mat_c_before_var <- apply(X_mat_c_before, 2, var)
+      std_dif_after <- (X_mat_t_mean - X_mat_c_before_mean)/sqrt((X_mat_t_var + X_mat_c_before_var)/2)
+      res_mat<-matrix(nrow=dim(X_mat_r)[1],ncol=dim(X_mat_r)[2])
+      for(i in 1:length(names(sm)[-1])){
+        c<-names(sm[,-1])[i]
+        res<-lm(as.formula(paste0(c,"~distance")),data = sm)
+        res_mat[,(1+i)]<-res$residuals
+      }
+      res_mat[,1]<-X_mat_r[,1]
+      res_mat_t <- res_mat[msample$tgdel==1, ]
+      res_mat_c_before <- res_mat[msample$tgdel==0, ]
+      res_mat_t_var <- apply(res_mat_t, 2, var)
+      res_mat_c_before_var <- apply(res_mat_c_before, 2, var)
+      ratio_var_after <- res_mat_t_var/res_mat_c_before_var
+      
+      abs_std_dif_before <- std_dif_before
+      n_aux <- length(abs_std_dif_before)
+      abs_std_dif_after <- std_dif_after
+      #ratio_var_after <- X_mat_t_var/X_mat_c_before_var
+        
+        
       dotchart(abs_std_dif_before[n_aux:1], labels = colnames(X_mat)[n_aux:1], cex = .9, 
                pch = "", color = , main = "", 
                xlim = c(min(std_dif_before), max(std_dif_before)), xlab = "Standardized differences in means")
@@ -384,23 +420,73 @@ if(TRUE){
       points(abs_std_dif_after[n_aux:1], y = 1:ncol(X_mat), cex = 0.8, pch = 8, col = "blue")
       legend_position<-"topleft"
       legend(legend_position, c("Before matching", "After matching"), cex = .9, bty = "n", pch = c(0, 8), col = c("black", "blue"))
-      v_line<-.1
+      v_line<-.25
       abline(v = v_line, lty = 2)
       abline(v = -v_line, lty = 2)
       abline(h=(dim(X_mat)[2]-.5), col="black")
+      
+      dotchart(ratio_var_before[n_aux:1], labels = colnames(X_mat)[n_aux:1], cex = .9, 
+               pch = "", color = , main = "", 
+               xlim = c(0, 10), xlab = "Ratio of Variances")
+      points(ratio_var_before[n_aux:1], y = 1:ncol(X_mat), cex = 0.9, pch = 0)
+      points(ratio_var_after[n_aux:1], y = 1:ncol(X_mat), cex = 0.8, pch = 8, col = "blue")
+      legend_position<-"topright"
+      legend(legend_position, c("Before matching", "After matching"), cex = .9, bty = "n", pch = c(0, 8), col = c("black", "blue"))
+      #v_line<-.25
+      abline(v = .5, lty = 2)
+      abline(v = 2, lty = 2)
+      abline(h=(dim(X_mat)[2]-.5), col="black")
+
     }
+    
+    jpeg(file =paste0(path, "latex/loveplotmean.jpeg"),width = 500, height = 500)
+    
+    dotchart(abs_std_dif_before[n_aux:1], labels = colnames(X_mat)[n_aux:1], cex = .9, 
+             pch = "", color = , main = "", 
+             xlim = c(min(std_dif_before), max(std_dif_before)), xlab = "Standardized differences in means")
+    points(abs_std_dif_before[n_aux:1], y = 1:ncol(X_mat), cex = 0.9, pch = 0)
+    points(abs_std_dif_after[n_aux:1], y = 1:ncol(X_mat), cex = 0.8, pch = 8, col = "blue")
+    legend_position<-"topleft"
+    legend(legend_position, c("Before matching", "After matching"), cex = .9, bty = "n", pch = c(0, 8), col = c("black", "blue"))
+    v_line<-.25
+    abline(v = v_line, lty = 2)
+    abline(v = -v_line, lty = 2)
+    abline(h=(dim(X_mat)[2]-.5), col="black")
+    dev.off()
+    
+    jpeg(file =paste0(path, "latex/loveplotvar.jpeg"),width = 500, height = 500)
+    
+    dotchart(ratio_var_before[n_aux:1], labels = colnames(X_mat)[n_aux:1], cex = .9, 
+             pch = "", color = , main = "", 
+             xlim = c(0, 10), xlab = "Ratio of Variances")
+    points(ratio_var_before[n_aux:1], y = 1:ncol(X_mat), cex = 0.9, pch = 0)
+    points(ratio_var_after[n_aux:1], y = 1:ncol(X_mat), cex = 0.8, pch = 8, col = "blue")
+    legend_position<-"topright"
+    legend(legend_position, c("Before matching", "After matching"), cex = .9, bty = "n", pch = c(0, 8), col = c("black", "blue"))
+    #v_line<-.25
+    abline(v = .5, lty = 2)
+    abline(v = 2, lty = 2)
+    abline(h=(dim(X_mat)[2]-.5), col="black")
+    dev.off()
+    
+    
     mod_stargazer <- function(output.file, ...) {
       output <- capture.output(stargazer(...))
       cat(paste(output, collapse = "\n"), "\n", file=output.file, append=FALSE)
     }
     colnames(sm)<-newnames
-    mod_stargazer(paste0(path, "latex/summarystat.tex"),sm[,-"Propensity Score"] )
+    colnames(sam)<-newnames
+    mod_stargazer(paste0(path, "latex/summarystatmatch.tex"),
+                  sm[,-"Propensity Score"],digit.separator ="")
+    mod_stargazer(paste0(path, "latex/summarystat.tex"),
+                  sam[,-"Propensity Score"],digit.separator ="" )
     
     
     #mdm.full<-merge(mdm,samplemerge,all = FALSE, by = c("TransId","date"))
     sample<-data.frame(samplemerge)
     sample<-data.table(sample)
   }
+  
   #dist<-c('10k','8k','6k','5k','4k','3k','2k')#,'1k','500m')
   dist<-c('8k','6k','4k','2k')#,'1k','500m')
   dist<-c('10k','8k','6k','4k','2k')#,'1k','500m')
@@ -447,22 +533,26 @@ if(TRUE){
 }
 
 for(treat in  1:length(treatl)){
-  
+  #treat<-1
   treatc<-treatl[[treat]]
   #for(ll in 1:length(laglead)){
   for(di in 1:length(dist)){
     for(match in c("","match")){
       #match<-""
-      
+      #di<-1
       dic<-dist[[di]]
       din<-distn[di]
       ll<-1
       llc<-laglead[[ll]]
-      sample<-samplefull[abs(as.numeric(as.character(samplefull$tttyear)))-din<0,]
+      sample<-samplefull[samplefull[[paste0('dist',dic)]]>0,]
+      sample<-sample[abs(as.numeric(as.character(sample$tttyear)))-10<0,]
       #sample<-sample[presstatusd==0,]
       
       if(match=="match"){
-        sample<-samplefull[samplefull[[paste0('dist',dic)]]>0 & samplefull$matched,]
+        sample<-readRDS(paste(path,'msample.rds', sep=""),refhook = NULL)
+        
+        sample<-sample[sample[[paste0('dist',dic)]]>0,]
+        sample<-sample[abs(as.numeric(as.character(sample$tttyear)))-10<0,]
       }
       
       #sample$treatst<-sample$treatst-sample$presstatusd
@@ -539,10 +629,11 @@ for(treat in  1:length(treatl)){
                           #treatmentgroup*timetotreat+#treatmentgroup*day+
                           #timetodel+
                           LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                          sqfeet+age+ prediffdate+predate+prelogprice+indx+#presstatusd+
-                          bs(LotSizeSquareFeet,10) + bs(YearBuilt,10) + bs(FullBath,5) + 
-                          bs(sqfeet,10)+bs(age,10)+ bs(prediffdate,10)+
-                          bs(predate,10)+bs(prelogprice,10)+
+                          sqfeet+age+ +preage+ prediffdate+#predate+
+                          prelogprice+#indx+#presstatusd+
+                          #bs(LotSizeSquareFeet,10) + bs(YearBuilt,10) + bs(FullBath,5) + 
+                          #bs(sqfeet,10)+bs(age,10)+ bs(prediffdate,10)+
+                          #bs(predate,10)+bs(prelogprice,10)+#bs(preage,10)+
                           #tttyear
                           #as.factor(floor(timetotreat))+
                           -1,sample)
@@ -567,25 +658,27 @@ for(treat in  1:length(treatl)){
         #sample<-samplefull
         #sample<-mdm.full
         results.lm.t.did.i<-felm(logprice ~treatind+csind+
-                                    X|as.factor(cbl)+
-                                    as.factor(year):as.factor(quarter)+
-                                    as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample,psdef=FALSE) #as.factor(HHID)+
+                                   X|as.factor(cbl)+#as.factor(year):as.factor(preyear)+
+                                   as.factor(year):as.factor(quarter)+
+                                   as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
         summary(results.lm.t.did.i)
         
         results.lm.t.did.a<-felm(logprice ~treatind+csind+
-                                   X|as.factor(cbg)+
+                                   X|as.factor(cbg)+#as.factor(year):as.factor(preyear)+
                                    as.factor(year):as.factor(quarter)+
-                                   as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample,psdef=FALSE) #as.factor(HHID)+
+                                   as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
         summary(results.lm.t.did.a)
         
         results.lm.t.did.s<-felm(logprice ~treatind+csind+X|as.factor(ctr)+
+                                   #as.factor(year):as.factor(preyear)+
                                    as.factor(year):as.factor(quarter)+
-                                   as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample,psdef=FALSE) #as.factor(HHID)+
+                                   as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
         summary(results.lm.t.did.s)
         
         results.lm.t.did.y<-felm(logprice ~treatind+csind+X|as.factor(lsite)+
+                                   #as.factor(year):as.factor(preyear)+
                                    as.factor(year):as.factor(quarter)+
-                                   as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample,psdef=FALSE) #as.factor(HHID)+
+                                   as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
         summary(results.lm.t.did.y)
         
         
@@ -593,41 +686,37 @@ for(treat in  1:length(treatl)){
         #Spatial
         
         results.sp.t.did.i<-felm(logprice ~treatind+csind+
-                                   Xlag|as.factor(cbl)+
+                                   Xlag|as.factor(cbl)+#as.factor(year):as.factor(preyear)+
                                    as.factor(year):as.factor(quarter)+
-                                   as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample,psdef=FALSE) #as.factor(HHID)+
+                                   as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
         summary(results.sp.t.did.i)
         
         results.sp.t.did.a<-felm(logprice ~treatind+csind+
-                                   Xlag|as.factor(cbg)+
+                                   Xlag|as.factor(cbg)+#as.factor(year):as.factor(preyear)+
                                    as.factor(year):as.factor(quarter)+
-                                   as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample,psdef=FALSE) #as.factor(HHID)+
+                                   as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
         summary(results.sp.t.did.a)
         
         results.sp.t.did.s<-felm(logprice ~treatind+csind+Xlag|as.factor(ctr)+
+                                   #as.factor(year):as.factor(preyear)+
                                    as.factor(year):as.factor(quarter)+
-                                   as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample,psdef=FALSE) #as.factor(HHID)+
+                                   as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
         summary(results.sp.t.did.s)
         
         results.sp.t.did.y<-felm(logprice ~treatind+csind+Xlag|as.factor(lsite)+
+                                   #as.factor(year):as.factor(preyear)+
                                    as.factor(year):as.factor(quarter)+
-                                   as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample,psdef=FALSE) #as.factor(HHID)+
+                                   as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
         summary(results.sp.t.did.y)
         
-        #results.lm.t.did.z<-felm(logprice ~treatind+X|as.factor(PropertyZip)+as.factor(year):as.factor(quarter)+
-        #                           as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
-        #summary(results.lm.t.did.z)
-        
-        #results.lm.t.did.c<-felm(logprice ~treatind+X|as.factor(PropertyCity)| 0 | lsite:year,sample) #as.factor(HHID)+
-        #summary(results.lm.t.did.c)
-        
+      
         
         
         Xg<-model.matrix(~ #tgdel+
                            #indx+
-                           #timetodel+bs(timetodel,10)+
+                           timetodel+bs(timetodel,20)+
                            LotSizeSquareFeet + YearBuilt + FullBath + HalfBath + 
-                           sqfeet+age+prelogprice+# prediffdate+predate+prelogprice+#indx+#presstatusd+
+                           sqfeet+age+preage+prelogprice+indx+# prediffdate+predate+prelogprice+#indx+#presstatusd+
                            #bs(LotSizeSquareFeet,10) + bs(YearBuilt,10) + bs(FullBath,5) + 
                            #bs(sqfeet,10)+bs(age,10)+ bs(prediffdate,10)+
                            #bs(predate,10)+bs(prelogprice,10)+ 
@@ -702,19 +791,19 @@ for(treat in  1:length(treatl)){
         
         samplen<-data.frame(sample)
         
-        if(dic="10k"){
+        if(dic=="10k"){
           resid.ptlag<-felm(logprice~Xg|
                               as.factor(year):as.factor(quarter)+
                               as.factor(year):as.factor(preyear)+
                               #as.factor(ceiling(as.numeric(prediffdate)/90))+
                               #as.factor(ceiling(as.numeric(timetodel)/365))+
                               as.factor(preyear):as.factor(prequarter)+
-                              as.factor(lsite)|0|closestsite:year,sample,psdef=FALSE)
+                              as.factor(lsite)|0|lsite+year,sample,psdef=FALSE)
           samplen$crdid<-resid.ptlag$residuals
           #sample$crdid<-sample$demlogprice-Xg[,-1]%*%coefdid
           #sample$crdid<-sample$crdid-mean(sample$crdid)
           samplen$post<-ifelse(samplen$timetotreat>0,1,0)
-          treatment <- aggregate(crdid ~ tgdel+as.factor(year):as.factor(quarter), data=samplen, FUN=mean, na.rm=TRUE)
+          treatment <- aggregate(crdid ~ tgdel+as.factor(round(as.numeric(timetodel*4)/365,2)/4), data=samplen, FUN=mean, na.rm=TRUE)
           names(treatment)[2]<-"timetotreat"
           names(treatment)[3]<-"crdid"
           treatment$timetotreat<-as.numeric(as.character(treatment$timetotreat))
@@ -746,44 +835,56 @@ for(treat in  1:length(treatl)){
           ggsave(file=paste(path,'latex/','pretrends',treatc,dic, 'h5match.png', sep=""),height = 5,width =9)
         }
         
-        results.lm.t.did.agg<-felm(logprice ~treatst+Xg|as.factor(ctr)+
+        results.lm.t.did.agg<-felm(logprice ~tgdel:postdel+postdel+X|as.factor(ctr)+
+                                     #as.factor(year):as.factor(preyear)+
                                      as.factor(year):as.factor(quarter)+
-                                     as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample,psdef=FALSE) #as.factor(HHID)+
+                                     as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
         summary(results.lm.t.did.agg)
         
         
         if(match==""){
-          betas.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Estimate"][1])
-          ses.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Cluster s.e."][1])
-          ps.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Pr(>|t|)"][1])
+          betas.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Estimate"]["tgdel:postdel"])
+          ses.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Pr(>|t|)"]["tgdel:postdel"])
           
-          results.sp.t.did.agg<-felm(logprice ~treatst+Xglag|
+          results.sp.t.did.agg<-felm(logprice ~tgdel:postdel+tgdel+postdel+Xlag|
                                        as.factor(ctr)+
+                                       #as.factor(year):as.factor(preyear)+
                                        as.factor(year):as.factor(quarter)+
-                                       as.factor(preyear):as.factor(prequarter)| 0 | lsite:year,sample) #as.factor(HHID)+
+                                       as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample) #as.factor(HHID)+
           summary(results.sp.t.did.agg)
           
-          betas.sp.did[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg))[,"Estimate"][1])
-          ses.sp.did[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg))[,"Cluster s.e."][1])
-          ps.sp.did[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg))[,"Pr(>|t|)"][1])
+          betas.sp.did[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg))[,"Estimate"]["tgdel:postdel"])
+          ses.sp.did[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.sp.did[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg))[,"Pr(>|t|)"]["tgdel:postdel"])
           
           
         }
         if(match=="match"){
-          betas.match.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Estimate"][1])
-          ses.match.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Cluster s.e."][1])
-          ps.match.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Pr(>|t|)"][1])
+          betas.match.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Estimate"]["tgdel:postdel"])
+          ses.match.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.match.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Pr(>|t|)"]["tgdel:postdel"])
         }
         if(match==""){
-          results.gam<-mgcv::gam(logprice~treatst+Xg+#s(prelogprice,bs="cr")+
-                                   #as.factor(year):as.factor(quarter)+
-                                   #as.factor(preyear):as.factor(prequarter)+
+          if(dic!="2k"){
+          results.gam<-mgcv::gam(logprice~tgdel:postdel+tgdel+postdel+X+#s(prelogprice,bs="cr")+
+                                   as.factor(year):as.factor(quarter)+
+                                   as.factor(preyear):as.factor(prequarter)+
                                    as.factor(lsite)+s(lat,long,bs="tp",m=3,k=300),data=sample)
+          
+          }
+          if(dic=="2k"){
+            results.gam<-mgcv::gam(logprice~tgdel:postdel+tgdel+postdel+X+#s(prelogprice,bs="cr")+
+                                     as.factor(year):as.factor(quarter)+
+                                     as.factor(preyear):as.factor(prequarter)+
+                                     as.factor(lsite)+s(lat,long,bs="tp",m=3,k=100),data=sample)
+            
+          }
           gam.model.t<-mgcv::summary.gam(results.gam)   
           
-          betas.gam.did[treat,di]<-as.numeric(gam.model.t$p.table[,"Estimate"])[2]
-          ses.gam.did[treat,di]<-as.numeric(gam.model.t$p.table[,"Std. Error"])[2]
-          ps.gam.did[treat,di]<-as.numeric(gam.model.t$p.table[,"Pr(>|t|)"])[2]
+          betas.gam.did[treat,di]<-as.numeric(gam.model.t$p.table[,"Estimate"]["tgdel:postdel"])
+          ses.gam.did[treat,di]<-as.numeric(gam.model.t$p.table[,"Std. Error"]["tgdel:postdel"])
+          ps.gam.did[treat,di]<-as.numeric(gam.model.t$p.table[,"Pr(>|t|)"]["tgdel:postdel"])
         }
         
         
@@ -802,13 +903,26 @@ for(treat in  1:length(treatl)){
           #s1<-sample[lsite!=19,]
           #X1<-X[sample$lsite!=19,]
           #treatind1<-treatind[sample$lsite!=19,]
-          results.gam<-mgcv::gam(logprice~treatind+X+#s(prelogprice,bs="cr")+as.factor(lsite):
+         if(dic!="2k"){
+           results.gam<-mgcv::gam(logprice~treatind+csind+X+#s(prelogprice,bs="cr")+as.factor(lsite):
                                    #s(day,bs="cr")+s(predate,bs="cr")+
                                    as.factor(year):as.factor(quarter)+
                                    as.factor(preyear):as.factor(prequarter)+
+                                    #as.factor(year):as.factor(preyear)+
                                    as.factor(lsite)+
                                    s(PropertyAddressLatitude,PropertyAddressLongitude,bs="tp",m=3,k=300),data=sample)
-          gam.model<-mgcv::summary.gam(results.gam)  
+         }
+          if(dic=="2k"){
+            results.gam<-mgcv::gam(logprice~treatind+csind+X+#s(prelogprice,bs="cr")+as.factor(lsite):
+                                     #s(day,bs="cr")+s(predate,bs="cr")+
+                                     as.factor(year):as.factor(quarter)+
+                                     as.factor(preyear):as.factor(prequarter)+
+                                     #as.factor(year):as.factor(preyear)+
+                                     as.factor(lsite)+
+                                     s(PropertyAddressLatitude,PropertyAddressLongitude,bs="tp",m=3,k=100),data=sample)
+          }
+           
+            gam.model<-mgcv::summary.gam(results.gam)  
           mgcv::summary.gam(results.gam)  
           #results.gam<-mgcv::gam(logprice~treatind+X+#s(prelogprice,bs="cr")+
           #s(predate,bs="gp")+
@@ -1214,6 +1328,7 @@ for(treat in  1:length(treatl)){
         
         print(paste0('distance = ',dic))
         print(paste0('treat = ',treatc))
+        gc()
         
       }
       #}
@@ -1475,10 +1590,15 @@ for(statchange in c('')){
             pb4<-get(paste0(statchange,'betas.',meth,'.t.',inf,'.',treat,'.',specl[4]))
             pb<-rbind(pb1,pb2,pb3,pb4)
             
-            pb10k<-cbind(pb[1:10,1],pb[11:20,1],pb[21:30,1],pb[31:40,1])
-            pb8k<-cbind(pb[1:10,2],pb[11:20,2],pb[21:30,2],pb[31:40,2])
-            pb6k<-cbind(pb[1:10,3],pb[11:20,3],pb[21:30,3],pb[31:40,3])
-            pb4k<-cbind(pb[1:10,4],pb[11:20,4],pb[21:30,4],pb[31:40,4])
+            q1<-quant
+            q2<-quant*2
+            q3<-quant*3
+            q4<-quant*4
+            
+            pb10k<-cbind(pb[1:q1,1],pb[(q1+1):q2,1],pb[(q2+1):q3,1],pb[(q3+1):q4,1])
+            pb8k<-cbind(pb[1:q1,2],pb[(q1+1):q2,2],pb[(q2+1):q3,2],pb[(q3+1):q4,2])
+            pb6k<-cbind(pb[1:q1,3],pb[(q1+1):q2,3],pb[(q2+1):q3,3],pb[(q3+1):q4,3])
+            pb4k<-cbind(pb[1:q1,4],pb[(q1+1):q2,4],pb[(q2+1):q3,4],pb[(q3+1):q4,4])
             
             rpb<-round(pb,3)
             se1<-round(get(paste0(statchange,'ses.',meth,'.t.',inf,'.',treat,'.',specl[1])),3)
@@ -1487,10 +1607,10 @@ for(statchange in c('')){
             se4<-round(get(paste0(statchange,'ses.',meth,'.t.',inf,'.',treat,'.',specl[4])),3)
             se<-rbind(se1,se2,se3,se4)
             
-            se10k<-cbind(se[1:10,1],se[11:20,1],se[21:30,1],se[31:40,1])
-            se8k<-cbind(se[1:10,2],se[11:20,2],se[21:30,2],se[31:40,2])
-            se6k<-cbind(se[1:10,3],se[11:20,3],se[21:30,3],se[31:40,3])
-            se4k<-cbind(se[1:10,4],se[11:20,4],se[21:30,4],se[31:40,4])
+            se10k<-cbind(se[1:q1,1],se[(q1+1):q2,1],se[(q2+1):q3,1],se[(q3+1):q4,1])
+            se8k<-cbind(se[1:q1,2],se[(q1+1):q2,2],se[(q2+1):q3,2],se[(q3+1):q4,2])
+            se6k<-cbind(se[1:q1,3],se[(q1+1):q2,3],se[(q2+1):q3,3],se[(q3+1):q4,3])
+            se4k<-cbind(se[1:q1,4],se[(q1+1):q2,4],se[(q2+1):q3,4],se[(q3+1):q4,4])
             
             srpb <- matrix(paste(rpb, mystars, sep=""), ncol=dim(pb)[2] )
             nsrpb<-rbind(c("",laglead),cbind(dist,srpb))
@@ -1521,19 +1641,20 @@ for(statchange in c('')){
             #  paste0(qcut[10],"]"),
             # paste0("(",qcut[10],","),paste0(qcut[11],"]"))
             
-            results10k<-cbind(results.mat[1:20,1],results.mat[21:40,1],results.mat[41:60,1],results.mat[61:80,1])
-            results8k<-cbind(results.mat[1:20,2],results.mat[21:40,2],results.mat[41:60,2],results.mat[61:80,2])
-            results6k<-cbind(results.mat[1:20,3],results.mat[21:40,3],results.mat[41:60,3],results.mat[61:80,3])
-            results4k<-cbind(results.mat[1:20,4],results.mat[21:40,4],results.mat[41:60,4],results.mat[61:80,4])
-            FEmatrix<- c("Census Tract","Census Tract","Superfund Site","Superfund Site")
-            Cluster<-c("Tract by Year","Site by Year","Tract by Year","Site by Year")
+            results10k<-cbind(results.mat[1:(q1*2),1],results.mat[((q1*2)+1):(q2*2),1],results.mat[((q2*2)+1):(q3*2),1],results.mat[((q3*2)+1):(q4*2),1])
+            results8k<-cbind(results.mat[1:(q1*2),2],results.mat[((q1*2)+1):(q2*2),2],results.mat[((q2*2)+1):(q3*2),2],results.mat[((q3*2)+1):(q4*2),2])
+            results6k<-cbind(results.mat[1:(q1*2),3],results.mat[((q1*2)+1):(q2*2),3],results.mat[((q2*2)+1):(q3*2),3],results.mat[((q3*2)+1):(q4*2),3])
+            results4k<-cbind(results.mat[1:(q1*2),4],results.mat[((q1*2)+1):(q2*2),4],results.mat[((q2*2)+1):(q3*2),4],results.mat[((q3*2)+1):(q4*2),4])
+            FEmatrix<- c("Census Block","Census Block Group","Census Tract","Superfund Site")
+            Cluster<-c("Tract by Year","Tract by Year","Tract by Year","Tract by Year")
             rn2<-c(paste0("(",qcut[1],",",qcut[2],"]"),"  ",paste0("(",qcut[2],",",qcut[3],"]"),"    ",
                    paste0("(",qcut[3],",",qcut[4],"]"),"      ",
                    paste0("(",qcut[4],",",qcut[5],"]"),"       ",paste0("(",qcut[5],",",qcut[6],"]"),"        ",
                    paste0("(",qcut[6],",",qcut[7],"]"),"           ",paste0("(",qcut[7],",",qcut[8],"]"),"            ",
                    paste0("(",qcut[8],",",qcut[9],"]"),"             ", paste0("(",qcut[9],",",qcut[10],"]"),"          ",
-                   paste0("(",qcut[10],",",qcut[11],"]"),"                  ", "Fixed Effects", "Cluster")
-            
+                   paste0("(",qcut[10],",",qcut[11],"]"),"                  ")
+            rn2<-rn2[1:(dim(results10k)[1])]
+            rn2<-c(rn2, "Fixed Effects", "Cluster")
             
             results10k<-rbind(results10k,FEmatrix,Cluster)
             results8k<-rbind(results8k,FEmatrix,Cluster)
@@ -1549,20 +1670,39 @@ for(statchange in c('')){
                   paste0("(",qcut[2],",",qcut[quant],"]"),"Middle 80 Percentile" ,
                   paste0("(",qcut[quant],",",qcut[quant+1],"]"), "Top Ten Percentile")
             
+            if(meth=='sp'){
+              methc<-'Spatial'
+            }
+            if(meth=='match'){
+              methc<-'Matched'
+            }
+            if(meth=='lm'){
+              methc<-'OLS'
+            }
+            if(treat=='TATE'){
+              treatc<-'Total'
+            }
+            if(treat=='MUATE'){
+              treatc<-'Municipal Water'
+            }
+            if(treat=='WLATE'){
+              treatc<-'Well Water'
+            }
+            
             xtable(results10k)
-            print.xtable(xtable(results10k),include.rownames=TRUE, 
+            print.xtable(xtable(results10k, caption = paste0(methc, ' cut-off 10 km - ',treatc )),include.rownames=TRUE, 
                          include.colnames=FALSE, sanitize.text.function = identity,
                          type="latex", file=paste0(path,'latex/',meth,inf,statchange,treat,"10k.tex"))
             xtable(results8k)
-            print.xtable(xtable(results8k),include.rownames=TRUE, 
+            print.xtable(xtable(results8k, caption = paste0(methc, ' cut-off 8 km - ',treatc )),include.rownames=TRUE, 
                          include.colnames=FALSE, sanitize.text.function = identity,
                          type="latex", file=paste0(path,'latex/',meth,inf,statchange,treat,"8k.tex"))
             xtable(results6k)
-            print.xtable(xtable(results6k),include.rownames=TRUE, 
+            print.xtable(xtable(results6k, caption = paste0(methc, ' cut-off 6 km - ',treatc )),include.rownames=TRUE, 
                          include.colnames=FALSE, sanitize.text.function = identity,
                          type="latex", file=paste0(path,'latex/',meth,inf,statchange,treat,"6k.tex"))
             xtable(results4k)
-            print.xtable(xtable(results4k),include.rownames=TRUE, 
+            print.xtable(xtable(results4k, caption = paste0(methc, ' cut-off 4 km - ',treatc )),include.rownames=TRUE, 
                          include.colnames=FALSE, sanitize.text.function = identity,
                          type="latex", file=paste0(path,'latex/',meth,inf,statchange,treat,"4k.tex"))
             
@@ -1570,7 +1710,7 @@ for(statchange in c('')){
             
             qu<-c("Bottom","Middle","Top")
             leg<-c('Block','Block Group','Tract','Site')
-            qun<-c(1:10)
+            qun<-c(1:quant)
             for(j in c("4k","6k","8k","10k")){
               pb<-get(paste0("pb",j))
               se<-get(paste0("se",j))
@@ -1578,7 +1718,7 @@ for(statchange in c('')){
                                           Coefficient = pb[,1],
                                           SE = se[, 1],
                                           modelName = 'Block')
-              for(i in 2:length(leg)){
+              for(i in 2:(length(leg))){
                 le<-leg[i]
                 modelFrame <- data.frame(Variable =  qun,
                                          Coefficient = pb[,i],
