@@ -477,9 +477,13 @@ if(TRUE){
     colnames(sm)<-newnames
     colnames(sam)<-newnames
     mod_stargazer(paste0(path, "latex/summarystatmatch.tex"),
-                  sm[,-"Propensity Score"],digit.separator ="")
+                  sm[,-"Propensity Score"],digit.separator ="",
+                  style = "qje", notes.append = FALSE, notes.align = "l",
+                  notes  = "\\parbox[t]{\\textwidth\\linespread{1}\\selectfont}{Pctl(25) and Pctl(75) mark the 25th and 75th quantiles of each variable. Ages are measured in years. Lot size is measured in square feet. Houses with wells are coded as 1 and 0 if there is no well.}")
     mod_stargazer(paste0(path, "latex/summarystat.tex"),
-                  sam[,-"Propensity Score"],digit.separator ="" )
+                  sam[,-"Propensity Score"],digit.separator ="",
+                  style = "qje", notes.append = FALSE, notes.align = "l",
+                  notes  = "\\parbox[t]{\\textwidth\\linespread{1}\\selectfont}{Pctl(25) and Pctl(75) mark the 25th and 75th quantiles of each variable. Ages are measured in years. Lot size is measured in square feet. Houses with wells are coded as 1 and 0 if there is no well.}")
     
     
     #mdm.full<-merge(mdm,samplemerge,all = FALSE, by = c("TransId","date"))
@@ -514,9 +518,9 @@ if(TRUE){
             assign(paste0('ses.',i,'.',j,'.',k,'.',treat,'.',spec),matrix(ncol = length(dist),nrow=quant))
             assign(paste0('ps.',i,'.',j,'.',k,'.',treat,'.',spec),matrix(ncol = length(dist),nrow=quant))
             
-            assign(paste0('betas.',i,'.',k),matrix(ncol = length(dist),nrow=length(treatl)))
-            assign(paste0('ses.',i,'.',k),matrix(ncol = length(dist),nrow=length(treatl)))
-            assign(paste0('ps.',i,'.',k),matrix(ncol = length(dist),nrow=length(treatl)))
+            assign(paste0('betas.',i,'.',k,'.',spec),matrix(ncol = length(dist),nrow=length(treatl)))
+            assign(paste0('ses.',i,'.',k,'.',spec),matrix(ncol = length(dist),nrow=length(treatl)))
+            assign(paste0('ps.',i,'.',k,'.',spec),matrix(ncol = length(dist),nrow=length(treatl)))
             
           }
         }
@@ -681,7 +685,25 @@ for(treat in  1:length(treatl)){
                                    as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
         summary(results.lm.t.did.y)
         
-        
+        stargazer(out=paste0(path, "latex/ols",treat,dic,"m",match,".tex"),
+                  results.lm.t.did.i, results.lm.t.did.a,
+                  results.lm.t.did.s,results.lm.t.did.y,
+                  dep.var.labels.include = FALSE,
+                  covariate.labels = c("TG\\times Post\\times Q1","TG\\times Post\\times Q2","TG\\times Post\\times Q3","TG\\times Post\\times Q4","TG\\times Post\\times Q5",
+                               "Post","Q1","Q2","Q3","Q4","Q5",
+                               "TG\\times Q1","TG\\times Q2","TG\\times Q3","TG\\times Q4","TG\\times Q5",
+                               "Post\\times Q2","Post\\times Q3","Post\\times Q4","Post\\times Q5",
+                               "Lot Size","Year Built","Full Bath", "Half Bath","Square Feet",
+                               "Age","Age Last Sold","Difference in Date","Price Last Sold"),
+                  type = "html",
+                  digits = 4,
+                  digits.extra =0,
+                  dep.var.caption="Log Housing Price",
+                  notes.align = "l",
+                  notes  = "\\parbox[t]{11cm}{Dependent variable is the natural log of transaction price. Each column represents the same regression with different fixed effects. Variables with no coefficients and zero standard errors were dropped due to multicollinearity. Coefficients and standard errors were truncated at the ten thousandths place.}",
+                  add.lines = list(c("Fixed effects", "Block", "Block Group", "Tract", "Site"),
+                                   c("Clustered Std","Tract by Year","Tract by Year","Tract by Year","Tract by Year")),
+                  multicolumn = FALSE)
         #################################
         #Spatial
         
@@ -709,7 +731,25 @@ for(treat in  1:length(treatl)){
                                    as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
         summary(results.sp.t.did.y)
         
-      
+        stargazer(out=paste0(path, "latex/sp",treat,dic,"m",match,".tex"),
+                  results.sp.t.did.i, results.sp.t.did.a,
+                  results.sp.t.did.s,results.sp.t.did.y,
+                  dep.var.labels.include = FALSE,
+                  covariate.labels = c("TG\\times Post\\times Q1","TG\\times Post\\times Q2","TG\\times Post\\times Q3","TG\\times Post\\times Q4","TG\\times Post\\times Q5",
+                                       "Post","Q1","Q2","Q3","Q4","Q5",
+                                       "TG\\times Q1","TG\\times Q2","TG\\times Q3","TG\\times Q4","TG\\times Q5",
+                                       "Post\\times Q2","Post\\times Q3","Post\\times Q4","Post\\times Q5",
+                                       "Lot Size","Year Built","Full Bath", "Half Bath","Square Feet",
+                                       "Age","Age Last Sold","Difference in Date","Price Last Sold","Lag Pre-treatment price"),
+                  type = "html",
+                  digits = 4,
+                  digits.extra =0,
+                  dep.var.caption="Log Housing Price",
+                  notes.align = "l",
+                  notes  = "\\parbox[t]{11cm}{Dependent variable is the natural log of transaction price. Each column represents the same regression with different fixed effects. Variables with no coefficients and zero standard errors were dropped due to multicollinearity. Coefficients and standard errors were truncated at the ten thousandths place.}",
+                  add.lines = list(c("Fixed effects", "Block", "Block Group", "Tract", "Site"),
+                                   c("Clustered Std","Tract by Year","Tract by Year","Tract by Year","Tract by Year")),
+                  multicolumn = FALSE)
         
         
         Xg<-model.matrix(~ #tgdel+
@@ -835,36 +875,155 @@ for(treat in  1:length(treatl)){
           ggsave(file=paste(path,'latex/','pretrends',treatc,dic, 'h5match.png', sep=""),height = 5,width =9)
         }
         
-        results.lm.t.did.agg<-felm(logprice ~tgdel:postdel+postdel+X|as.factor(ctr)+
+        results.lm.t.did.agg.i<-felm(logprice ~tgdel:postdel+postdel+X|as.factor(cbl)+
                                      #as.factor(year):as.factor(preyear)+
                                      as.factor(year):as.factor(quarter)+
                                      as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
-        summary(results.lm.t.did.agg)
+        summary(results.lm.t.did.agg.i)
+        
+        results.lm.t.did.agg.a<-felm(logprice ~tgdel:postdel+postdel+X|as.factor(cbg)+
+                                     #as.factor(year):as.factor(preyear)+
+                                     as.factor(year):as.factor(quarter)+
+                                     as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
+        summary(results.lm.t.did.agg.a)
+        
+        results.lm.t.did.agg.s<-felm(logprice ~tgdel:postdel+postdel+X|as.factor(ctr)+
+                                     #as.factor(year):as.factor(preyear)+
+                                     as.factor(year):as.factor(quarter)+
+                                     as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
+        summary(results.lm.t.did.agg.s)
+        
+        results.lm.t.did.agg.y<-felm(logprice ~tgdel:postdel+postdel+X|as.factor(lsite)+
+                                     #as.factor(year):as.factor(preyear)+
+                                     as.factor(year):as.factor(quarter)+
+                                     as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample,psdef=FALSE) #as.factor(HHID)+
+        summary(results.lm.t.did.agg.y)
+        
+        stargazer(out=paste0(path, "latex/wellslm",treat,dic,"m",match,".tex"),
+                  results.lm.t.did.agg.i, results.lm.t.did.agg.a,
+                  results.lm.t.did.agg.s,results.lm.t.did.agg.y,
+                  dep.var.labels.include = FALSE,
+                  covariate.labels = c("Post",
+                                       "Lot Size","Year Built","Full Bath", 
+                                       "Half Bath","Square Feet",
+                                       "Age","Age Last Sold",
+                                       "Difference in Date","Price Last Sold",
+                                       #"Lag Pre-treatment price",
+                                       "TG\\times Post"),
+                  type = "html",
+                  digits = 4,
+                  digits.extra =0,
+                  dep.var.caption="Log Housing Price",
+                  notes.align = "l",
+                  notes  = "\\parbox[t]{11cm}{Dependent variable is the natural log of transaction price. Each column represents the same regression with different fixed effects. Variables with no coefficients and zero standard errors were dropped due to multicollinearity. Coefficients and standard errors were truncated at the ten thousandths place.}",
+                  add.lines = list(c("Fixed effects", "Block", "Block Group", "Tract", "Site"),
+                                   c("Clustered Std","Tract by Year","Tract by Year","Tract by Year","Tract by Year")),
+                  multicolumn = FALSE)
+        
         
         
         if(match==""){
-          betas.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Estimate"]["tgdel:postdel"])
-          ses.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Cluster s.e."]["tgdel:postdel"])
-          ps.lm.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Pr(>|t|)"]["tgdel:postdel"])
+          betas.lm.did.i[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.i))[,"Estimate"]["tgdel:postdel"])
+          ses.lm.did.i[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.i))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.lm.did.i[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.i))[,"Pr(>|t|)"]["tgdel:postdel"])
           
-          results.sp.t.did.agg<-felm(logprice ~tgdel:postdel+tgdel+postdel+Xlag|
+          betas.lm.did.a[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.a))[,"Estimate"]["tgdel:postdel"])
+          ses.lm.did.a[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.a))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.lm.did.a[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.a))[,"Pr(>|t|)"]["tgdel:postdel"])
+          
+          betas.lm.did.s[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.s))[,"Estimate"]["tgdel:postdel"])
+          ses.lm.did.s[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.s))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.lm.did.s[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.s))[,"Pr(>|t|)"]["tgdel:postdel"])
+          
+          betas.lm.did.y[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.y))[,"Estimate"]["tgdel:postdel"])
+          ses.lm.did.y[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.y))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.lm.did.y[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.y))[,"Pr(>|t|)"]["tgdel:postdel"])
+          
+          results.sp.t.did.agg.i<-felm(logprice ~tgdel:postdel+postdel+Xlag|
+                                       as.factor(cbl)+
+                                       #as.factor(year):as.factor(preyear)+
+                                       as.factor(year):as.factor(quarter)+
+                                       as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample) #as.factor(HHID)+
+          summary(results.sp.t.did.agg.i)
+          
+          results.sp.t.did.agg.a<-felm(logprice ~tgdel:postdel+postdel+Xlag|
+                                       as.factor(cbg)+
+                                       #as.factor(year):as.factor(preyear)+
+                                       as.factor(year):as.factor(quarter)+
+                                       as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample) #as.factor(HHID)+
+          summary(results.sp.t.did.agg.a)
+          
+          results.sp.t.did.agg.s<-felm(logprice ~tgdel:postdel+postdel+Xlag|
                                        as.factor(ctr)+
                                        #as.factor(year):as.factor(preyear)+
                                        as.factor(year):as.factor(quarter)+
                                        as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample) #as.factor(HHID)+
-          summary(results.sp.t.did.agg)
+          summary(results.sp.t.did.agg.s)
           
-          betas.sp.did[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg))[,"Estimate"]["tgdel:postdel"])
-          ses.sp.did[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg))[,"Cluster s.e."]["tgdel:postdel"])
-          ps.sp.did[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg))[,"Pr(>|t|)"]["tgdel:postdel"])
+          results.sp.t.did.agg.y<-felm(logprice ~tgdel:postdel+postdel+Xlag|
+                                       as.factor(lsite)+
+                                       #as.factor(year):as.factor(preyear)+
+                                       as.factor(year):as.factor(quarter)+
+                                       as.factor(preyear):as.factor(prequarter)| 0 | ctr+year,sample) #as.factor(HHID)+
+          summary(results.sp.t.did.agg.y)
+          
+          stargazer(out=paste0(path, "latex/wellssp",treat,dic,"m",match,".tex"),
+                    results.sp.t.did.agg.i, results.sp.t.did.agg.a,
+                    results.sp.t.did.agg.s,results.sp.t.did.agg.y,
+                    dep.var.labels.include = FALSE,
+                    covariate.labels = c("Post",
+                                         "Lot Size","Year Built","Full Bath", 
+                                         "Half Bath","Square Feet",
+                                         "Age","Age Last Sold",
+                                         "Difference in Date","Price Last Sold",
+                                         "Lag Pre-treatment price",
+                                         "TG\\times Post"),
+                    type = "html",
+                    digits = 4,
+                    digits.extra =0,
+                    dep.var.caption="Log Housing Price",
+                    notes.align = "l",
+                    notes  = "\\parbox[t]{11cm}{Dependent variable is the natural log of transaction price. Each column represents the same regression with different fixed effects. Variables with no coefficients and zero standard errors were dropped due to multicollinearity. Coefficients and standard errors were truncated at the ten thousandths place.}",
+                    add.lines = list(c("Fixed effects", "Block", "Block Group", "Tract", "Site"),
+                                     c("Clustered Std","Tract by Year","Tract by Year","Tract by Year","Tract by Year")),
+                    multicolumn = FALSE)
+          
+          betas.sp.did.i[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg.i))[,"Estimate"]["tgdel:postdel"])
+          ses.sp.did.i[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg.i))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.sp.did.i[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg.i))[,"Pr(>|t|)"]["tgdel:postdel"])
+          
+          betas.sp.did.a[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg.a))[,"Estimate"]["tgdel:postdel"])
+          ses.sp.did.a[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg.a))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.sp.did.a[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg.a))[,"Pr(>|t|)"]["tgdel:postdel"])
+          
+          betas.sp.did.s[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg.s))[,"Estimate"]["tgdel:postdel"])
+          ses.sp.did.s[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg.s))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.sp.did.s[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg.s))[,"Pr(>|t|)"]["tgdel:postdel"])
+          
+          betas.sp.did.y[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg.y))[,"Estimate"]["tgdel:postdel"])
+          ses.sp.did.y[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg.y))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.sp.did.y[treat,di]<-as.numeric(coef(summary(results.sp.t.did.agg.y))[,"Pr(>|t|)"]["tgdel:postdel"])
           
           
         }
         if(match=="match"){
-          betas.match.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Estimate"]["tgdel:postdel"])
-          ses.match.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Cluster s.e."]["tgdel:postdel"])
-          ps.match.did[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg))[,"Pr(>|t|)"]["tgdel:postdel"])
-        }
+          betas.match.did.i[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.i))[,"Estimate"]["tgdel:postdel"])
+          ses.match.did.i[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.i))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.match.did.i[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.i))[,"Pr(>|t|)"]["tgdel:postdel"])
+        
+          betas.match.did.a[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.a))[,"Estimate"]["tgdel:postdel"])
+          ses.match.did.a[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.a))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.match.did.a[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.a))[,"Pr(>|t|)"]["tgdel:postdel"])
+          
+          betas.match.did.s[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.s))[,"Estimate"]["tgdel:postdel"])
+          ses.match.did.s[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.s))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.match.did.s[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.s))[,"Pr(>|t|)"]["tgdel:postdel"])
+          
+          betas.match.did.y[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.y))[,"Estimate"]["tgdel:postdel"])
+          ses.match.did.y[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.y))[,"Cluster s.e."]["tgdel:postdel"])
+          ps.match.did.y[treat,di]<-as.numeric(coef(summary(results.lm.t.did.agg.y))[,"Pr(>|t|)"]["tgdel:postdel"])
+          
+          }
         if(match==""){
           if(dic!="2k"){
           results.gam<-mgcv::gam(logprice~tgdel:postdel+tgdel+postdel+X+#s(prelogprice,bs="cr")+
@@ -882,9 +1041,9 @@ for(treat in  1:length(treatl)){
           }
           gam.model.t<-mgcv::summary.gam(results.gam)   
           
-          betas.gam.did[treat,di]<-as.numeric(gam.model.t$p.table[,"Estimate"]["tgdel:postdel"])
-          ses.gam.did[treat,di]<-as.numeric(gam.model.t$p.table[,"Std. Error"]["tgdel:postdel"])
-          ps.gam.did[treat,di]<-as.numeric(gam.model.t$p.table[,"Pr(>|t|)"]["tgdel:postdel"])
+          betas.gam.did.[treat,di]<-as.numeric(gam.model.t$p.table[,"Estimate"]["tgdel:postdel"])
+          ses.gam.did.[treat,di]<-as.numeric(gam.model.t$p.table[,"Std. Error"]["tgdel:postdel"])
+          ps.gam.did.[treat,di]<-as.numeric(gam.model.t$p.table[,"Pr(>|t|)"]["tgdel:postdel"])
         }
         
         
@@ -1336,6 +1495,12 @@ for(treat in  1:length(treatl)){
   }
 }
 
+if(TRUE){
+  statchange<-''
+  meth<-'lm'
+  inf<-'did'
+  treat<-"TATE"
+  spec<-""
 for(statchange in c('')){
   for(meth in c('lm','gam','match','sp')){
     for(inf in c('did')){
@@ -1344,7 +1509,7 @@ for(statchange in c('')){
           #treat<-"TATE"
           
           p<-get(paste0(statchange,'ps.',meth,'.t.',inf,'.',treat,'.',spec))
-          mystars <- ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "* ", ifelse(p < .1, "^\\bullet  ", " "))))
+          mystars <- ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "* ","")))
           if(!is.na(p[1,1])){
             #pb<-exp(get(paste0(statchange,'betas.',meth,'.t.',inf,'.',treat)))-1
             #rpb<-round(pb,3)
@@ -1460,18 +1625,22 @@ for(statchange in c('')){
     }
   }
 }
+}
 
+if(TRUE){
+  meth<-"lm"
 for(meth in c("lm","gam","match",'sp')){
-  p<-get(paste0('ps.',meth,'.did'))
-  mystars <- ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "* ", ifelse(p < .1, "^\\bullet  ", " "))))
+  for(fe in c("i","a","s","y")){
+  p<-get(paste0('ps.',meth,'.did.',fe))
+  mystars <- ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "* ", "")))
   
   #pb<-exp(get(paste0(statchange,'betas.',meth,'.t.',inf,'.',treat)))-1
   #rpb<-round(pb,3)
   #se<-round(exp(get(paste0(statchange,'ses.',meth,'.t.',inf,'.',treat)))-1,3)
   
-  pb<-get(paste0('betas.',meth,'.did'))
+  pb<-get(paste0('betas.',meth,'.did.',fe))
   rpb<-round(pb,3)
-  se<-round(get(paste0('ses.',meth,'.did')),3)
+  se<-round(get(paste0('ses.',meth,'.did.',fe)),3)
   
   srpb <- matrix(paste(rpb, mystars, sep=""), ncol=dim(pb)[2] )
   nsrpb<-rbind(c("",laglead),cbind(dist,srpb))
@@ -1521,7 +1690,7 @@ for(meth in c("lm","gam","match",'sp')){
                include.colnames=FALSE, sanitize.text.function = identity,
                #caption = "example", 
                label = paste0("tab:",meth,"water"),
-               type="latex", file=paste0(path,'latex/ATEcomp',meth,'.tex'))
+               type="latex", file=paste0(path,'latex/ATEcomp',meth,fe,'.tex'))
   
   qu<-c("Bottom","Middle","Top")
   if(FALSE){
@@ -1560,10 +1729,12 @@ for(meth in c("lm","gam","match",'sp')){
     #zp1 <- zp1 + scale_x_discrete(breaks=qu)
     print(zp1)  # The trick to these is position_dodge().
     
-    ggsave(file=paste(path,'latex/','coeff',meth,treat, '.png', sep=""),height = 7,width =9)
+    ggsave(file=paste(path,'latex/','coeff',meth,treat,fe, '.png', sep=""),height = 7,width =9)
   }
 }
-
+}
+}
+  
 for(statchange in c('')){
   for(meth in c('lm',"match",'sp')){
     for(inf in c('did')){
@@ -1755,6 +1926,207 @@ for(statchange in c('')){
               
               ggsave(file=paste(path,'latex/','coeff',meth,treat,j, 'ols.png', sep=""),height = 7,width =9)
             }
+          }
+        }
+        
+      }
+    }
+  }
+}
+
+
+for(statchange in c('')){
+  for(meth in c('lm',"match",'sp')){
+    for(inf in c('did')){
+      for(treat in  treatl){
+        for(di in dist){
+          #treat<-"TATE"
+          #di<-1
+          #meth<-'lm'
+          ntreat<-as.numeric(rbind(treatl,1:3)[,treat==treatl][2])
+          
+          p1<-get(paste0(statchange,'ps.',meth,'.',inf,'.',specl[1]))[ntreat,]
+          p2<-get(paste0(statchange,'ps.',meth,'.',inf,'.',specl[2]))[ntreat,]
+          p3<-get(paste0(statchange,'ps.',meth,'.',inf,'.',specl[3]))[ntreat,]
+          p4<-get(paste0(statchange,'ps.',meth,'.',inf,'.',specl[4]))[ntreat,]
+          p<-rbind(p1,p2,p3,p4)
+          mystars <- ifelse(p < .001, "***", ifelse(p < .01, "** ", ifelse(p < .05, "* ", ifelse(p < .1, "^\\bullet  ", " "))))
+          if(!is.na(p[1,1])){
+            #pb<-exp(get(paste0(statchange,'betas.',meth,'.t.',inf,'.',treat)))-1
+            #rpb<-round(pb,3)
+            #se<-round(exp(get(paste0(statchange,'ses.',meth,'.t.',inf,'.',treat)))-1,3)
+            
+            pb1<-get(paste0(statchange,'betas.',meth,'.',inf,'.',specl[1]))[ntreat,]
+            pb2<-get(paste0(statchange,'betas.',meth,'.',inf,'.',specl[2]))[ntreat,]
+            pb3<-get(paste0(statchange,'betas.',meth,'.',inf,'.',specl[3]))[ntreat,]
+            pb4<-get(paste0(statchange,'betas.',meth,'.',inf,'.',specl[4]))[ntreat,]
+            pb<-rbind(pb1,pb2,pb3,pb4)
+            
+            q1<-quant
+            q2<-quant*2
+            q3<-quant*3
+            q4<-quant*4
+            
+            rpb<-round(pb,3)
+            pb10k<-pb[1,]
+            pb8k<-pb[2,]
+            pb6k<-pb[3,]
+            pb4k<-pb[4,]
+          
+            se1<-round(get(paste0(statchange,'ses.',meth,'.',inf,'.',specl[1])),3)[ntreat,]
+            se2<-round(get(paste0(statchange,'ses.',meth,'.',inf,'.',specl[2])),3)[ntreat,]
+            se3<-round(get(paste0(statchange,'ses.',meth,'.',inf,'.',specl[3])),3)[ntreat,]
+            se4<-round(get(paste0(statchange,'ses.',meth,'.',inf,'.',specl[4])),3)[ntreat,]
+            se<-rbind(se1,se2,se3,se4)
+            
+            se10k<-se[1,]
+            se8k<-se[2,]
+            se6k<-se[3,]
+            se4k<-se[4,]
+            
+            srpb <- matrix(paste(rpb, mystars, sep=""), ncol=dim(pb)[2] )
+            nsrpb<-rbind(c("",laglead),cbind(dist,srpb))
+            
+            #colnames(srpb)<-laglead
+            #rownames(srpb)<-dist
+            #10k
+            
+            
+            results.mat<-matrix(nrow= 2*dim(srpb)[1],ncol= dim(srpb)[2])
+            
+            for(i in 1:dim(results.mat)[1]){
+              if(i %% 2 != 0){
+                results.mat[i,]<-srpb[ceiling(i/2),]
+                #    rownames(ols.mat)[i]<-rownames(srpb)[ceiling(i/2)]
+              }
+              if(i %% 2 == 0){
+                results.mat[i,]<-paste0('(',se[ceiling(i/2),],')')
+              }
+            }
+            
+            colnames(results.mat)<-c('10k','8k','6k','4k','2k')
+            # rn<-c(paste0("(",qcut[1],","),paste0(qcut[2],"]"),paste0("(",qcut[2],","),paste0(qcut[3],"]"),
+            #      paste0("(",qcut[3],","),paste0(qcut[4],"]"),
+            #     paste0("(",qcut[4],","),paste0(qcut[5],"]"),paste0("(",qcut[5],","),
+            #    paste0(qcut[6],"]"),paste0("(",qcut[6],","),paste0(qcut[7],"]"),paste0("(",qcut[7],","),
+            #   paste0(qcut[8],"]"),paste0("(",qcut[8],","),paste0(qcut[9],"]"),paste0("(",qcut[9],","),
+            #  paste0(qcut[10],"]"),
+            # paste0("(",qcut[10],","),paste0(qcut[11],"]"))
+            
+            results10k<-cbind(results.mat[1:2,1],results.mat[3:4,1],results.mat[5:6,1],results.mat[7:8,1])
+            results8k<-cbind(results.mat[1:2,2],results.mat[3:4,2],results.mat[5:6,2],results.mat[7:8,2])
+            results6k<-cbind(results.mat[1:2,3],results.mat[3:4,3],results.mat[5:6,3],results.mat[7:8,3])
+            results4k<-cbind(results.mat[1:2,4],results.mat[3:4,4],results.mat[5:6,4],results.mat[7:8,4])
+            FEmatrix<- c("Census Block","Census Block Group","Census Tract","Superfund Site")
+            Cluster<-c("Tract by Year","Tract by Year","Tract by Year","Tract by Year")
+            rn2<-c(paste0("(",qcut[1],",",qcut[2],"]"),"  ",paste0("(",qcut[2],",",qcut[3],"]"),"    ",
+                   paste0("(",qcut[3],",",qcut[4],"]"),"      ",
+                   paste0("(",qcut[4],",",qcut[5],"]"),"       ",paste0("(",qcut[5],",",qcut[6],"]"),"        ",
+                   paste0("(",qcut[6],",",qcut[7],"]"),"           ",paste0("(",qcut[7],",",qcut[8],"]"),"            ",
+                   paste0("(",qcut[8],",",qcut[9],"]"),"             ", paste0("(",qcut[9],",",qcut[10],"]"),"          ",
+                   paste0("(",qcut[10],",",qcut[11],"]"),"                  ")
+            rn2<-rn2[1:(dim(results10k)[1])]
+            rn2<-c(rn2, "Fixed Effects", "Cluster")
+            
+            results10k<-rbind(results10k,FEmatrix,Cluster)
+            results8k<-rbind(results8k,FEmatrix,Cluster)
+            results6k<-rbind(results6k,FEmatrix,Cluster)
+            results4k<-rbind(results4k,FEmatrix,Cluster)
+            
+            rownames(results10k)<-rn2
+            rownames(results8k)<-rn2
+            rownames(results6k)<-rn2
+            rownames(results4k)<-rn2
+            
+            rn<-c(paste0("(",qcut[1],",",qcut[2],"]"),"Bottom Ten Percentile" ,
+                  paste0("(",qcut[2],",",qcut[quant],"]"),"Middle 80 Percentile" ,
+                  paste0("(",qcut[quant],",",qcut[quant+1],"]"), "Top Ten Percentile")
+            
+            if(meth=='sp'){
+              methc<-'Spatial'
+            }
+            if(meth=='match'){
+              methc<-'Matched'
+            }
+            if(meth=='lm'){
+              methc<-'OLS'
+            }
+            if(treat=='TATE'){
+              treatc<-'Total'
+            }
+            if(treat=='MUATE'){
+              treatc<-'Municipal Water'
+            }
+            if(treat=='WLATE'){
+              treatc<-'Well Water'
+            }
+            
+            xtable(results10k)
+            print.xtable(xtable(results10k, caption = paste0(methc, ' cut-off 10 km - ',treatc )),include.rownames=TRUE, 
+                         include.colnames=FALSE, sanitize.text.function = identity,
+                         type="latex", file=paste0(path,'latex/well',meth,inf,statchange,treat,"10k.tex"))
+            xtable(results8k)
+            print.xtable(xtable(results8k, caption = paste0(methc, ' cut-off 8 km - ',treatc )),include.rownames=TRUE, 
+                         include.colnames=FALSE, sanitize.text.function = identity,
+                         type="latex", file=paste0(path,'latex/well',meth,inf,statchange,treat,"8k.tex"))
+            xtable(results6k)
+            print.xtable(xtable(results6k, caption = paste0(methc, ' cut-off 6 km - ',treatc )),include.rownames=TRUE, 
+                         include.colnames=FALSE, sanitize.text.function = identity,
+                         type="latex", file=paste0(path,'latex/well',meth,inf,statchange,treat,"6k.tex"))
+            xtable(results4k)
+            print.xtable(xtable(results4k, caption = paste0(methc, ' cut-off 4 km - ',treatc )),include.rownames=TRUE, 
+                         include.colnames=FALSE, sanitize.text.function = identity,
+                         type="latex", file=paste0(path,'latex/well',meth,inf,statchange,treat,"4k.tex"))
+            
+            
+            
+            qu<-c("Bottom","Middle","Top")
+            leg<-c('Block','Block Group','Tract','Site')
+            qun<-c("10 km","8 km","6 km","4 km","2 km")
+            j<-1
+            
+
+              allModelFrame <- data.frame(Variable = qun,
+                                          Coefficient = pb[1,],
+                                          SE = se[1, ],
+                                          modelName = 'Block')
+              for(i in 2:(length(leg))){
+                le<-leg[i]
+                modelFrame <- data.frame(Variable =  qun,
+                                         Coefficient = pb[i,],
+                                         SE = se[ i,],
+                                         modelName = le)
+                allModelFrame <- data.frame(rbind(allModelFrame,modelFrame))
+                
+              }
+              
+              interval2 <- -qnorm((1-0.9)/2)  # 95% multiplier
+              #allModelFrame<-allModelFrame[allModelFrame$modelName!="2k",]
+              allModelFrame$modelName<-factor( allModelFrame$modelName,ordered = TRUE)
+              allModelFrame$modelName<-factor(allModelFrame$modelName,levels(allModelFrame$modelName)[c(1,2,4,3)],ordered = TRUE)
+              
+              
+              # Plot
+              zp1 <- ggplot(allModelFrame, aes(colour = modelName ))
+              
+              zp1 <- zp1 + geom_hline(yintercept = 0, colour = gray(1/2), lty = 2)
+              zp1 <- zp1 + geom_pointrange(aes(x = Variable, y = Coefficient, ymin = Coefficient - SE*interval2,
+                                               ymax = Coefficient + SE*interval2,color =modelName),
+                                           lwd = 1/2, position = position_dodge(width = 1/2),
+                                           shape = 21, fill = "WHITE")
+              #zp1 <- zp1 + coord_flip() + theme_bw()
+              
+              #zp1 <- zp1 + geom_line(data = allModelFrame, aes(linetype =modelName ), size = 1) +
+              zp1 <- zp1 + ggtitle("Comparing distance cut-offs")+xlab('Quantile')  
+              #zp1 <- zp1 + scale_x_continuous(labels=c("1"="B","2"="M","3"="T"))
+              #scale_color_discrete(breaks=c("1","3","10")
+              
+              zp1 <- zp1 + scale_x_discrete(limits=qun)
+              zp1 <- zp1  +  labs(color="Fixed Effects")
+              print(zp1)  # The trick to these is position_dodge().
+              
+              ggsave(file=paste(path,'latex/','coeffwells',meth,treat, 'ols.png', sep=""),height = 7,width =9)
+            
           }
         }
         
